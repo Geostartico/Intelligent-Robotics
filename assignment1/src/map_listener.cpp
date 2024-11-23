@@ -8,6 +8,9 @@ void messageCallback(const
 {
     int width = msg->info.width;
     int height = msg->info.height;
+    ROS_INFO("got it");
+    ROS_INFO("%d", width);
+    ROS_INFO("%d", height);
 
     cv::Mat image(height, width, CV_8UC1);
 
@@ -26,13 +29,14 @@ void messageCallback(const
         }
     }
 
-    cv::imshow("Occupancy Grid", image);
-    cv::waitKey(1);  
+    cv::imwrite("/home/cwinge/map.png", image);
+    ROS_INFO("got out");
 }
 int main(int argc, char **argv)
 {
 	//pass argc, argv and the name of the node
 	ros::init(argc, argv, "listener");
+        ROS_INFO("starting");
 	ros::NodeHandle n;
 	ros::Subscriber sub = n.subscribe("/move_base/global_costmap/costmap",
 			1000, messageCallback);
