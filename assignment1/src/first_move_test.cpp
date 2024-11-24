@@ -14,18 +14,18 @@ int main(int argc, char **argv)
     goal.target_pose.header.stamp = ros::Time::now();
     goal.target_pose.header.frame_id = "map";
 
-    moveBaseGoal.target_pose.pose.orientation.x = 0;
-    moveBaseGoal.target_pose.pose.orientation.y = 0;
-    moveBaseGoal.target_pose.pose.orientation.z = 0;
-    moveBaseGoal.target_pose.pose.orientation.w = 0;
+    goal.target_pose.pose.orientation.x = 0;
+    goal.target_pose.pose.orientation.y = 0;
+    goal.target_pose.pose.orientation.z = 0;
+    goal.target_pose.pose.orientation.w = 0;
 
     // Send goal.
-    moveBaseClient.sendGoal(moveBaseGoal);
-    moveBaseClient.waitForResult();
+    moveBase.sendGoal(goal);
+    moveBase.waitForResult();
 
     bool positionReached = true;
 
-    if(moveBaseClient.getState() == actionlib::SimpleClientGoalState::SUCCEEDED){
+    if(moveBase.getState() == actionlib::SimpleClientGoalState::SUCCEEDED){
         ROS_INFO("YAY");
     } else {
         ROS_INFO("NAY");
