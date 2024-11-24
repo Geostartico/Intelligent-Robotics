@@ -7,8 +7,7 @@ void messageCallback(const
 		nav_msgs::OccupancyGrid::ConstPtr& msg)
 {
     int width = msg->info.width;
-    int height = msg->info.height;
-    ROS_INFO("got it");
+    int height = msg->info.height; ROS_INFO("got it");
     ROS_INFO("%d", width);
     ROS_INFO("%d", height);
 
@@ -19,13 +18,14 @@ void messageCallback(const
             int index = i * width + j;
             int value = msg->data[index];
 
-            if (value == 100) {
-                image.at<uchar>(i, j) = 255;  
-            } else if (value == 0) {
-                image.at<uchar>(i, j) = 0;    
-            } else if (value == -1) {
-                image.at<uchar>(i, j) = 127;  
-            }
+            image.at<uchar>(i, j) = value;  
+            //if (value > 100) {
+            //    image.at<uchar>(i, j) = 255;  
+            //} else if (value > 0 && value < 100) {
+            //    image.at<uchar>(i, j) = 0;    
+            //} else if (value == -1) {
+            //    image.at<uchar>(i, j) = 127;  
+            //}
         }
     }
 
@@ -36,9 +36,9 @@ int main(int argc, char **argv)
 {
 	//pass argc, argv and the name of the node
 	ros::init(argc, argv, "listener");
-        ROS_INFO("starting");
+    ROS_INFO("starting");
 	ros::NodeHandle n;
-	ros::Subscriber sub = n.subscribe("/move_base/global_costmap/costmap",
+	ros::Subscriber sub = n.subscribe("/map",
 			1000, messageCallback);
 	ros::spin();
 	return 0;

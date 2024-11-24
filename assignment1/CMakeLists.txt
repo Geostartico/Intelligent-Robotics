@@ -121,6 +121,8 @@ include_directories(
 
 add_executable(map_listener src/map_listener.cpp)
 target_link_libraries(map_listener ${catkin_LIBRARIES})
+add_executable(waypoints_finder src/waypoints_finder.cpp)
+target_link_libraries(waypoints_finder ${catkin_LIBRARIES})
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
 #   src/${PROJECT_NAME}/assignment1.cpp
