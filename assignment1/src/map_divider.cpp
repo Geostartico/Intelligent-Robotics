@@ -97,7 +97,7 @@ void processConnectedComponents(const Mat& binaryImage, int threshold) {
 
 int main() {
     // Load binary image
-    Mat binaryImage = imread("../map.png", IMREAD_GRAYSCALE);
+    Mat binaryImage = imread("/tmp/map.png", IMREAD_GRAYSCALE);
     if (binaryImage.empty()) {
         cerr << "Could not load image!" << endl;
         return -1;
