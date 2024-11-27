@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
 add_service_files(
     FILES
     map_service.srv
+    map_waypoints.srv
 )
 
  add_action_files(
@@ -47,3 +48,5 @@ add_executable(map_service src/map_service.cpp)
 target_link_libraries(map_service ${catkin_LIBRARIES})
 add_executable(map_divider src/map_divider.cpp)
 target_link_libraries(map_divider ${catkin_LIBRARIES})
+add_executable(map_waypoints_service src/map_waypoints_service.cpp)
+target_link_libraries(map_waypoints_service ${catkin_LIBRARIES})
