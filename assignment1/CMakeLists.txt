@@ -19,7 +19,7 @@ add_service_files(
 add_action_files(
     DIRECTORY
     FILES
-    Waypoint_move.action
+    WaypointMove.action
 )
 
 generate_messages(
@@ -65,3 +65,7 @@ target_link_libraries(map_divider ${catkin_LIBRARIES})
 add_executable(map_waypoints_service src/map_waypoints_service.cpp)
 add_dependencies(map_waypoints_service assignment1_generate_messages_cpp)
 target_link_libraries(map_waypoints_service ${catkin_LIBRARIES})
+
+add_executable(coordinator src/coordinator.cpp)
+add_dependencies(coordinator assignment1_generate_messages_cpp)
+target_link_libraries(coordinator ${catkin_LIBRARIES})
