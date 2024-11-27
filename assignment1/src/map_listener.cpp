@@ -3,8 +3,8 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/Image.h>
-void messageCallback(const
-		nav_msgs::OccupancyGrid::ConstPtr& msg)
+
+void messageCallback(const nav_msgs::OccupancyGrid::ConstPtr& msg)
 {
     int width = msg->info.width;
     int height = msg->info.height; ROS_INFO("got it");
@@ -29,17 +29,17 @@ void messageCallback(const
         }
     }
 
-    cv::imwrite("/home/cwinge/map.png", image);
+    cv::imwrite("/tmp/map.png", image);
     ROS_INFO("got out");
 }
+
 int main(int argc, char **argv)
 {
 	//pass argc, argv and the name of the node
 	ros::init(argc, argv, "listener");
     ROS_INFO("starting");
 	ros::NodeHandle n;
-	ros::Subscriber sub = n.subscribe("/map",
-			1000, messageCallback);
+	ros::Subscriber sub = n.subscribe("/map", 1000, messageCallback);
 	ros::spin();
 	return 0;
 }
