@@ -16,37 +16,52 @@ add_service_files(
     map_waypoints.srv
 )
 
- add_action_files(
-     DIRECTORY
-     FILES
- )
- generate_messages(
-     DEPENDENCIES
-     actionlib_msgs
-     std_msgs
- )
-catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES intro_services
-  CATKIN_DEPENDS roscpp std_msgs
-#  DEPENDS system_lib
+add_action_files(
+    DIRECTORY
+    FILES
+    Waypoint_move.action
 )
-catkin_package( CATKIN_DEPENDS actionlib)
+
+generate_messages(
+    DEPENDENCIES
+    actionlib_msgs
+    std_msgs
+)
+ 
+catkin_package(
+# INCLUDE_DIRS include
+# LIBRARIES intro_services
+  CATKIN_DEPENDS roscpp std_msgs
+# DEPENDS system_lib
+)
+
+catkin_package( 
+  CATKIN_DEPENDS 
+  roscpp 
+  std_msgs 
+  message_runtime
+  actionlib)
 
 include_directories(
- include
+  include
   ${catkin_INCLUDE_DIRS}
 )
 
 add_executable(map_listener src/map_listener.cpp)
 target_link_libraries(map_listener ${catkin_LIBRARIES})
+
 add_executable(waypoints_finder src/waypoints_finder.cpp)
 target_link_libraries(waypoints_finder ${catkin_LIBRARIES})
+
 add_executable(first_move_test src/first_move_test.cpp)
 target_link_libraries(first_move_test ${catkin_LIBRARIES})
+
 add_executable(map_service src/map_service.cpp)
 target_link_libraries(map_service ${catkin_LIBRARIES})
+
 add_executable(map_divider src/map_divider.cpp)
 target_link_libraries(map_divider ${catkin_LIBRARIES})
+
 add_executable(map_waypoints_service src/map_waypoints_service.cpp)
+add_dependencies(map_waypoints_service assignment1_generate_messages_cpp)
 target_link_libraries(map_waypoints_service ${catkin_LIBRARIES})
