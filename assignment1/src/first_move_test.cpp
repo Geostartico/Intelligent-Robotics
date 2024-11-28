@@ -10,8 +10,8 @@ int main(int argc, char **argv)
 
     move_base_msgs::MoveBaseGoal goal;
     goal.target_pose.header.seq =1;
-    goal.target_pose.pose.position.x = 11.7;
-    goal.target_pose.pose.position.y = -3.3;
+    goal.target_pose.pose.position.x = 0.0;
+    goal.target_pose.pose.position.y = 0.0;
     goal.target_pose.pose.position.z = 0.0;
     goal.target_pose.header.stamp = ros::Time::now();
     goal.target_pose.header.frame_id = "map";

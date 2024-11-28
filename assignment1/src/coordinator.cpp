@@ -23,6 +23,10 @@ void resultCallback(const actionlib::SimpleClientGoalState& state, const ResultP
         ROS_INFO("Waypoint NOT reached as planned.");
 }
 
+float distanceSquared(float x1, float y1, float x2, float y2) {
+    return std::pow(x1 - x2, 2) + std::pow(y1 - y2, 2);
+}
+
 int main(int argc, char **argv) {
     ros::init(argc, argv, "coordinator_node");
     ros::NodeHandle n;
@@ -30,19 +34,48 @@ int main(int argc, char **argv) {
     // Service client to get the waypoints
     ros::ServiceClient wp_client = n.serviceClient<assignment1::map_waypoints>("map_waypoints_service");
     assignment1::map_waypoints srv;
-    const float TILE_DIM = 50;
+    const float TILE_DIM = 2;
     srv.request.dim = TILE_DIM;
 
     std::vector<float> x, y;
+    std::vector<std::pair<float, float>> waypoints;
     if(wp_client.call(srv)) {
         ROS_INFO("map_waypoints_service call successful.");
         x = srv.response.x;
         y = srv.response.y;
+        for (int i=0; i<x.size(); i++) {
+            waypoints.emplace_back(x[i], y[i]);
+        }        
         ROS_INFO("Received %lu waypoints.", x.size());
+        // ROS_INFO("Last Waypoint received, x:%f y:%f", x[x.size() - 1], y[y.size() - 1]);
     }
     else {
         ROS_ERROR("Failed to call service map_waypoints_service.");
         return 1;
+    }
+
+    std::pair<float,float> curr_pos = {0.0f, 0.0f};
+    ROS_INFO("Initial position, x:%f y:%f", curr_pos.first, curr_pos.second);
+
+    while(waypoints.size() > 0) {
+        auto closest_it = waypoints.begin();
+        float min_distance = distanceSquared(curr_pos.first, curr_pos.second, closest_it->first, closest_it->second);
+
+        for (auto it = waypoints.begin() + 1; it != waypoints.end(); ++it) {
+            float dist = distanceSquared(curr_pos.first, curr_pos.second, it->first, it->second);
+            if (dist < min_distance) {
+                min_distance = dist;
+                closest_it = it;
+            }
+        }
+
+        // Update curr_pos with the closest point
+        curr_pos = *closest_it;
+
+        // Remove the closest point from the vector
+        waypoints.erase(closest_it);
+
+        ROS_INFO("Next Waypoint, x:%f y:%f", curr_pos.first, curr_pos.second);
     }
 
     // Action client to send the waypoint goal
