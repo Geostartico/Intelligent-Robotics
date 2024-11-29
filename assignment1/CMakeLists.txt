@@ -69,3 +69,7 @@ target_link_libraries(map_waypoints_service ${catkin_LIBRARIES})
 add_executable(coordinator src/coordinator.cpp)
 add_dependencies(coordinator assignment1_generate_messages_cpp)
 target_link_libraries(coordinator ${catkin_LIBRARIES})
+
+add_executable(MovementHandler src/movement_handler.cpp)
+add_dependencies(MovementHandler assignment1_generate_messages_cpp)
+target_link_libraries(MovementHandler ${catkin_LIBRARIES})

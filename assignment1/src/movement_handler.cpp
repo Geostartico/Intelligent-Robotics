@@ -1,11 +1,12 @@
 #include <ros/ros.h>
-#include <actionlib/client/simple_action_server.h>
+#include <actionlib/server/simple_action_server.h>
+#include <actionlib/client/simple_action_client.h>
 #include <move_base_msgs/MoveBaseAction.h>
 #include <move_base_msgs/MoveBaseGoal.h>
 #include <geometry_msgs/PoseStamped.h>
-#include <action/WaypointMove.action>
+#include <assignment1/WaypointMoveAction.h>
 
-typedef actionlib::SimpleActionServer<action::WaypointMove> Server;
+typedef actionlib::SimpleActionServer<assignment1::WaypointMoveAction> Server;
 
 class MovementHandler
 {
@@ -13,22 +14,22 @@ class MovementHandler
     ros::NodeHandle nh_;
     Server as_;  //ActionServer
     std::string action_name_;
-    action::Waypoint_moveFeedback feedback_;
-    action::Waypoint_moveResult result_;
+    assignment1::WaypointMoveFeedback feedback_;
+    assignment1::WaypointMoveResult result_;
     actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> move_base_client_;
 
 
     public:
 
-        NavigationHandler(std::string name) :
-            as_(nh_, name, boost:bind(&NavigationHandler::callbackOnGoal. this, _1), false),
+        MovementHandler(std::string name) :
+            as_(nh_, name, boost::bind(&MovementHandler::callbackOnGoal, this, _1), false),
             action_name_(name),
             move_base_client_("move_base", true)
             {
                 as_.start();
             }
     
-        void callbackOnGoal(const action::Waypoint_moveGoal::ConstPtr &goal)
+        void callbackOnGoal(const assignment1::WaypointMoveGoal::ConstPtr &goal)
         {
             ROS_INFO("GOAL RECEIVED - MOVING");
             move_base_msgs::MoveBaseGoal  move_goal;
@@ -44,10 +45,10 @@ class MovementHandler
             move_goal.target_pose.pose.orientation.w = 1.0;
 
             move_base_client_.sendGoal(move_goal);
-            bool timeoout = moveBase.waitForResult(ros::duration(45.0));
+            bool timeout = move_base_client_.waitForResult(ros::Duration(45.0));
             if(timeout)
             {
-                if(move_base_client_moveBase.getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
+                if(move_base_client_.getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
                 {
                     result_.reached=true;
                     ROS_INFO("NAV OK");
@@ -61,14 +62,14 @@ class MovementHandler
                 result_.reached = false;
                 ROS_ERROR("NAV TIMEOUT");
             }
-            as_.serSucceded(result_);
+            as_.setSucceeded(result_);
         }
 };
 
 int main(int argc, char** argv){
     ros::init(argc, argv, "movement_handler");
 
-    Waypoint_move move_to_goal("move_to_goal");
+    MovementHandler move_to_goal("move_to_goal");
 
     ros::spin();
 
