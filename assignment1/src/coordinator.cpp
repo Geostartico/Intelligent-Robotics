@@ -57,6 +57,12 @@ int main(int argc, char **argv) {
     std::pair<float,float> curr_pos = {0.0f, 0.0f};
     ROS_INFO("Initial position, x:%f y:%f", curr_pos.first, curr_pos.second);
 
+    // Action client to send the waypoint goal
+    WaypointMoveClient ac("WaypointMove", true);
+    ROS_INFO("Waiting for robot server to start...");
+    ac.waitForServer();
+    ROS_INFO("Robot server started, sending first waypoint.");
+
     while(waypoints.size() > 0) {
         auto closest_it = waypoints.begin();
         float min_distance = distanceSquared(curr_pos.first, curr_pos.second, closest_it->first, closest_it->second);
@@ -69,36 +75,30 @@ int main(int argc, char **argv) {
             }
         }
 
+        assignment1::WaypointMoveGoal goal;
+        goal.x = (*closest_it).first;
+        goal.y = (*closest_it).second;
+        ROS_INFO("Next Waypoint x:%f y:%f", goal.x, goal.y);
+
+        // Send the goal with result and feedback callbacks, and no active callback
+        ac.sendGoal(goal, &resultCallback, WaypointMoveClient::SimpleActiveCallback(), &feedbackCallback);
+
+        bool finished_before_timeout = ac.waitForResult(ros::Duration(500.0));
+        if (finished_before_timeout) {
+            actionlib::SimpleClientGoalState state = ac.getState();
+            ROS_INFO("Waypoint reached: %s", state.toString().c_str());
+        } else {
+            ROS_INFO("Waypoint not reached before the timeout.");
+        }
+
         // Update curr_pos with the closest point
         curr_pos = *closest_it;
 
         // Remove the closest point from the vector
         waypoints.erase(closest_it);
-
-        ROS_INFO("Next Waypoint, x:%f y:%f", curr_pos.first, curr_pos.second);
     }
 
-    // Action client to send the waypoint goal
-    WaypointMoveClient ac("WaypointMove", true);
-    ROS_INFO("Waiting for robot server to start...");
-    ac.waitForServer();
-    ROS_INFO("Robot server started, sending first waypoint.");
-
-    assignment1::WaypointMoveGoal goal;
-    goal.x = x[x.size() - 1];
-    goal.y = y[y.size() - 1];
-    ROS_INFO("Heading towards x:%f y:%f", goal.x, goal.y);
-
-    // Send the goal with result and feedback callbacks, and no active callback
-    ac.sendGoal(goal, &resultCallback, WaypointMoveClient::SimpleActiveCallback(), &feedbackCallback);
-
-    bool finished_before_timeout = ac.waitForResult(ros::Duration(500.0));
-    if (finished_before_timeout) {
-        actionlib::SimpleClientGoalState state = ac.getState();
-        ROS_INFO("Waypoint reached: %s", state.toString().c_str());
-    } else {
-        ROS_INFO("Waypoint not reached before the timeout.");
-    }
+    ROS_INFO("All Waypoints visited, coordinator node shuts down.");
 
     return 0;
 }
