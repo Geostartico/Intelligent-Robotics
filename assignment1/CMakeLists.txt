@@ -14,6 +14,7 @@ add_service_files(
     FILES
     map_service.srv
     map_waypoints.srv
+    apriltag_detect.srv
 )
 
 add_action_files(
@@ -68,4 +69,9 @@ target_link_libraries(map_waypoints_service ${catkin_LIBRARIES})
 
 add_executable(coordinator src/coordinator.cpp)
 add_dependencies(coordinator assignment1_generate_messages_cpp)
+
+add_executable(aprilfish src/apriltag_locator.cpp)
+add_dependencies(aprilfish assignment1_generate_messages_cpp)
+target_link_libraries(aprilfish ${catkin_LIBRARIES})
+
 target_link_libraries(coordinator ${catkin_LIBRARIES})
