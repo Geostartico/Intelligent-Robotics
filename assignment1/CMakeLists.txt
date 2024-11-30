@@ -75,3 +75,10 @@ add_dependencies(aprilfish assignment1_generate_messages_cpp)
 target_link_libraries(aprilfish ${catkin_LIBRARIES})
 
 target_link_libraries(coordinator ${catkin_LIBRARIES})
+
+add_executable(MovementHandler src/movement_handler.cpp)
+add_dependencies(MovementHandler assignment1_generate_messages_cpp)
+target_link_libraries(MovementHandler ${catkin_LIBRARIES})
+
+add_executable(look_downer src/look_down.cpp)
+target_link_libraries(look_downer ${catkin_LIBRARIES})
