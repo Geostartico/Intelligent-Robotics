@@ -18,7 +18,12 @@
 #include "assignment1/apriltag_detect.h"
 
 
-std::map<int, std::vector<geometry_msgs::PoseStamped>> apriltags_detected;
+struct aprilmean{
+    float x;
+    float y;
+    int counter;
+};
+std::map<int, aprilmean> apriltags_detected;
 
 void detectionCallbackTF2(const apriltag_ros::AprilTagDetectionArrayConstPtr& msg)
 {
@@ -53,28 +58,26 @@ void detectionCallbackTF2(const apriltag_ros::AprilTagDetectionArrayConstPtr& ms
       ROS_INFO_STREAM("Original pose\n" << pos_in);
       ROS_INFO_STREAM("Transformed pose\n" << pos_out);
       if(apriltags_detected.find((int)(msg->detections.at(i).id[0])) == apriltags_detected.end()){
-          std::vector<geometry_msgs::PoseStamped> tmp = {pos_out};
+          aprilmean tmp;
+          tmp.x = pos_out.pose.position.x;
+          tmp.y = pos_out.pose.position.y;
+          tmp.counter = 1;
           apriltags_detected[msg->detections.at(i).id[0]] = tmp;
       }
       else
-          apriltags_detected.at(msg->detections.at(i).id[0]).push_back(pos_out);
+          apriltags_detected.at(msg->detections.at(i).id[0]).x += pos_out.pose.position.x;
+          apriltags_detected.at(msg->detections.at(i).id[0]).y += pos_out.pose.position.y;
+          apriltags_detected.at(msg->detections.at(i).id[0]).counter++;
 
   }
 }
 bool get_apriltags(assignment1::apriltag_detect::Request &req, assignment1::apriltag_detect::Response &res){
     for(auto const &april : apriltags_detected){
         res.id.push_back(april.first);
-        float x_ = 0;
-        float y_ = 0;
-        int counter = 0;
-
-        for(auto const &position : april.second){
-            counter++;
-            x_ += position.pose.position.x;
-            y_ += position.pose.position.y;
-        }
-        res.x.push_back(x_/counter);
-        res.y.push_back(y_/counter);
+        float x_ = april.second.x/april.second.counter;
+        float y_ = april.second.x/april.second.counter;
+        res.x.push_back(x_);
+        res.y.push_back(y_);
     }
     apriltags_detected.clear();
     return true;
