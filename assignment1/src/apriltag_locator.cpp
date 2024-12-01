@@ -79,7 +79,6 @@ bool get_apriltags(assignment1::apriltag_detect::Request &req, assignment1::apri
         res.x.push_back(x_);
         res.y.push_back(y_);
     }
-    apriltags_detected.clear();
     return true;
 }
 void lookDown() {
