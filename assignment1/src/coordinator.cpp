@@ -58,7 +58,7 @@ int main(int argc, char **argv) {
     ROS_INFO("Initial position, x:%f y:%f", curr_pos.first, curr_pos.second);
 
     // Action client to send the waypoint goal
-    WaypointMoveClient ac("move_to_goal", true);
+    WaypointMoveClient ac("WaypointMove", true);
     ROS_INFO("Waiting for robot server to start...");
     ac.waitForServer();
     ROS_INFO("Robot server started, sending first waypoint.");

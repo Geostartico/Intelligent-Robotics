@@ -73,7 +73,7 @@ void detectionCallbackTF2(const apriltag_ros::AprilTagDetectionArrayConstPtr& ms
 }
 bool get_apriltags(assignment1::apriltag_detect::Request &req, assignment1::apriltag_detect::Response &res){
     for(auto const &april : apriltags_detected){
-        res.id.push_back(april.first);
+        res.ids.push_back(april.first);
         float x_ = april.second.x/april.second.counter;
         float y_ = april.second.x/april.second.counter;
         res.x.push_back(x_);

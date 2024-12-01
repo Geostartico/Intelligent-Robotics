@@ -21,6 +21,7 @@ add_action_files(
     DIRECTORY
     FILES
     WaypointMove.action
+    ApriltagSearch.action
 )
 
 generate_messages(
