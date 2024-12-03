@@ -4,6 +4,7 @@
 #include <actionlib/client/terminal_state.h>
 #include <vector>
 #include <map>
+#include <cstdint>
 #include "assignment1/map_waypoints.h"
 #include "assignment1/apriltag_detect.h"
 #include "assignment1/WaypointMoveAction.h"
@@ -35,9 +36,13 @@ class Coordinator {
 
     void executeCB(const assignment1::ApriltagSearchGoalConstPtr &goal)
     {
-        std::map<int, float> map_atfound;
+        std::vector<int> ids = goal-> ids;
+        std::map<int, bool> map_atfound;
         std::map<int, std::pair<float, float>> map_atcoord;
-        // INITIALIZE MAPS HERE WITH GOAL
+        for(int id : ids) {
+            map_atfound[id] = false;                 
+            map_atcoord[id] = std::make_pair(0.0f, 0.0f); 
+        }
 
         feedback_.status = {"Robot is requesting waypoints for the navigation."};
         as_.publishFeedback(feedback_);
@@ -92,16 +97,21 @@ class Coordinator {
                 }
             }
 
-            assignment1::WaypointMoveGoal goal;
-            goal.x = (*closest_it).first;
-            goal.y = (*closest_it).second;
-            ROS_INFO("Next Waypoint x:%f y:%f", goal.x, goal.y);
+            assignment1::WaypointMoveGoal wp_goal;
+            wp_goal.x = (*closest_it).first;
+            wp_goal.y = (*closest_it).second;
+            ROS_INFO("Next Waypoint x:%f y:%f", wp_goal.x, wp_goal.y);
 
             feedback_.status = {"Robot is navigating and scanning..."};
             as_.publishFeedback(feedback_);
 
             // Send the goal with result and feedback callbacks, and no active callback
-            ac.sendGoal(goal, &resultCallback, WaypointMoveClient::SimpleActiveCallback(), &feedbackCallback);
+            ac.sendGoal(
+                wp_goal,
+                boost::bind(&Coordinator::resultCallback, this, _1, _2),  
+                WaypointMoveClient::SimpleActiveCallback(),
+                boost::bind(&Coordinator::feedbackCallback, this, _1)
+            );
 
             bool finished_before_timeout = ac.waitForResult(ros::Duration(500.0));
             if (finished_before_timeout) {
@@ -127,18 +137,62 @@ class Coordinator {
             if(ad_client.call(ad_srv)) {
                 ROS_INFO("apriltags_detected_service call successful.");
                 // TAGS FILTERING AND MANAGEMENT
+                std::vector<int> ids = ad_srv.response.ids;
+                for(int i=0; i<ids.size(); i++) {
+                    auto it = map_atfound.find(ids[i]);
+                    if(it != map_atfound.end()) {
+                        map_atfound[ids[i]] = true;
+                        map_atcoord[ids[i]] = std::make_pair(ad_srv.response.x[i], ad_srv.response.y[i]);
+                    }
+                }
             }
             else {
                 ROS_ERROR("Failed to call service apriltags_detected_service.");
                 return;
             }
 
-
+            // FEEDBACK ON ACTION FOR HOW MANY TAGS HAVE BEEN FOUND (with ids)
+            int ids_counter = 0;
+            std::string ids_list1 =  "";
+            std::string ids_list2 =  "";
+            for(int id : ids) {
+                if(map_atfound[id]==true) {
+                    ids_counter++;
+                    ids_list1 = ids_list1 + " " + std::to_string(id);
+                } else {
+                    ids_list2 = ids_list2 + " " + std::to_string(id);
+                }
+            }
+            feedback_.status = {"Apriltags search status: "+std::to_string(ids_counter)+"/"+std::to_string(ids.size()) ,
+                                "Apriltags found:  " + ids_list1,
+                                "Apriltags missing:" + ids_list2};
+            as_.publishFeedback(feedback_);
         }
 
         ROS_INFO("All Waypoints visited, coordinator node shuts down.");
         feedback_.status = {"Robot visited every waypoint. Navigation and Scanning complete."};
         as_.publishFeedback(feedback_);
+
+        // RESULT ON ACTION
+        std::vector<float> res_x;
+        std::vector<float> res_y;
+        std::vector<uint8_t>  res_f;
+        for(int id : ids) {
+            if(map_atfound[id]==true) {
+                res_x.push_back(map_atcoord[id].first);
+                res_y.push_back(map_atcoord[id].second);
+                res_f.push_back(1);
+            } else {
+                res_x.push_back(0.0f);
+                res_y.push_back(0.0f);
+                res_f.push_back(0);
+            }
+        }
+        result_.ids = ids;
+        result_.x   = res_x;
+        result_.y   = res_y;
+        result_.found = res_f;
+        as_.setSucceeded(result_);
     }
 
     // Feedback callback function

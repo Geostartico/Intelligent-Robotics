@@ -17,6 +17,7 @@ void feedbackCallback(const FeedbackPtr& feedback) {
 
 // Result callback function
 void resultCallback(const actionlib::SimpleClientGoalState& state, const ResultPtr& result) {
+    ROS_INFO("Apriltags search results:");
     for(int i=0; i<result->ids.size(); i++) {
         if(result->found[i])
             ROS_INFO("AprilTag %u found at x:%f y:%f", result->ids[i], result->x[i], result->y[i]);
