@@ -78,7 +78,7 @@ class Coordinator {
         ROS_INFO("Initial position, x:%f y:%f", curr_pos.first, curr_pos.second);
 
         // Action client to send the waypoint goal
-        WaypointMoveClient ac("WaypointMove", true);
+        WaypointMoveClient ac("move_to_goal", true);
         ROS_INFO("Waiting for robot server to start...");
         ac.waitForServer();
         ROS_INFO("Robot server started, sending first waypoint.");
@@ -128,7 +128,7 @@ class Coordinator {
             waypoints.erase(closest_it);
             
             ++counter;
-            feedback_.status = {"Robot has reached a waypoint. (" + std::to_string(counter) + "/" + std::to_string(tot_waypoints) + ") visited."};
+            feedback_.status = {"Robot has reached a waypoint: " + std::to_string(counter) + "/" + std::to_string(tot_waypoints) + " visited."};
             as_.publishFeedback(feedback_);
 
             ros::ServiceClient ad_client = nh_.serviceClient<assignment1::apriltag_detect>("apriltags_detected_service");
@@ -217,7 +217,7 @@ class Coordinator {
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "node_B");
-    Coordinator Coordinator("Search");
+    Coordinator Coordinator("Apriltag_Search");
     ros::spin();
     return 0;
 }

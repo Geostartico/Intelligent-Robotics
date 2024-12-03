@@ -48,10 +48,10 @@ int main(int argc, char **argv) {
     for(int i : ids)
         ROS_INFO("Tag: %u", i);
 
-    ApriltagSearchClient ac("ApriltagSearch", true);
-    ROS_INFO("Waiting for node_b-apriltag_search server to start...");
+    ApriltagSearchClient ac("Apriltag_Search", true);
+    ROS_INFO("Waiting for Apriltag_Search server to start...");
     ac.waitForServer();
-    ROS_INFO("node_b-apriltag_search server started, sending goal.");
+    ROS_INFO("Apriltag_Search server started, sending goal.");
 
     assignment1::ApriltagSearchGoal goal;
     goal.ids = ids;
