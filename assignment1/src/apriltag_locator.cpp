@@ -17,6 +17,7 @@
 
 #include "assignment1/apriltag_detect.h"
 
+int NUM_ITER_SEND = 10;
 
 struct aprilmean{
     float x;
@@ -25,8 +26,24 @@ struct aprilmean{
 };
 std::map<int, aprilmean> apriltags_detected;
 
+int n = 0;
+bool get_apriltags(){
+    ros::NodeHandle nh_;
+    assignment1::apriltag_detect req;
+    for(auto const &april : apriltags_detected){
+        req.request.ids.push_back(april.first);
+        float x_ = april.second.x/april.second.counter;
+        float y_ = april.second.x/april.second.counter;
+        req.request.x.push_back(x_);
+        req.request.y.push_back(y_);
+    }
+    ros::ServiceClient ad_client = nh_.serviceClient<assignment1::apriltag_detect>("apriltags_detected_service");
+    ad_client.call(req);
+    return true;
+}
 void detectionCallbackTF2(const apriltag_ros::AprilTagDetectionArrayConstPtr& msg)
 {
+    ROS_INFO("YEP");
   std::string target_frame = "base_link";
   std::string source_frame = msg->header.frame_id;
 
@@ -70,16 +87,11 @@ void detectionCallbackTF2(const apriltag_ros::AprilTagDetectionArrayConstPtr& ms
           apriltags_detected.at(msg->detections.at(i).id[0]).counter++;
 
   }
-}
-bool get_apriltags(assignment1::apriltag_detect::Request &req, assignment1::apriltag_detect::Response &res){
-    for(auto const &april : apriltags_detected){
-        res.ids.push_back(april.first);
-        float x_ = april.second.x/april.second.counter;
-        float y_ = april.second.x/april.second.counter;
-        res.x.push_back(x_);
-        res.y.push_back(y_);
-    }
-    return true;
+  n++;
+  if(NUM_ITER_SEND-n<=0){
+      n=0;
+      get_apriltags();
+  }
 }
 void lookDown() {
     actionlib::SimpleActionClient<control_msgs::PointHeadAction> client("/head_controller/point_head_action", true);
@@ -128,9 +140,19 @@ int main(int argc, char** argv)
 
   ros::Subscriber tag_subscriber;
   
-  tag_subscriber = nh.subscribe("tag_detections", 1000, detectionCallbackTF2);
-  ros::ServiceServer service = nh.advertiseService("apriltags_detected_service", get_apriltags);
+  tag_subscriber = nh.subscribe("tag_detections", 10, detectionCallbackTF2);
+  ROS_INFO_STREAM("locate_apriltag");
 
-  ros::spin();
+  //ros::Rate loop_rate(5.0); 
+
+  //   while (ros::ok()) {
+  //       ROS_INFO("ye");
+  //       // Call spinOnce to process callbacks
+  //       ros::spinOnce();
+
+  //       // Sleep for the rest of the cycle
+  //       loop_rate.sleep();
+  //   }
+    ros::spin(); 
   return 0;
 }
