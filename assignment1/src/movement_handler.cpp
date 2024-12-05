@@ -25,7 +25,6 @@ class MovementHandler
     assignment1::WaypointMoveFeedback feedback;
     assignment1::WaypointMoveResult result;
     actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> move_base_client;
-    tf::StampedTransform transform;
 
     public:
 
@@ -34,9 +33,6 @@ class MovementHandler
             action_name(name),
             move_base_client("move_base", true)
             {
-                tf::TransformListener listener;
-                listener.waitForTransform("map", "base_link", ros::Time(0), ros::Duration(3.0));
-                listener.lookupTransform("map", "base_link", ros::Time(0), transform);
                 as.start();
             }
     
@@ -60,8 +56,8 @@ class MovementHandler
             ros::Time start_time = ros::Time::now();
             ros::Duration timeout(20);
 
-            // blackROI  fuckin_table{-0.267452, 1.732548, -1.918757, 0.081243};
-            blackROI  fuckin_table{100.267452, 101.732548, 100.918757, 103.081243};
+            blackROI  fuckin_table{-0.267452, 1.732548, -1.918757, 0.081243};
+            // blackROI  fuckin_table{100.267452, 101.732548, 100.918757, 103.081243};
             
             ros::Rate rate(10.0);
             while (ros::ok())
@@ -104,6 +100,11 @@ class MovementHandler
     private:
     bool inBlackROI(double x_goal, double y_goal, blackROI& ROI)
     {
+        tf::StampedTransform transform;
+        tf::TransformListener listener;
+        listener.waitForTransform("map", "base_link", ros::Time(0), ros::Duration(3.0));
+        listener.lookupTransform("map", "base_link", ros::Time(0), transform);
+
         double x_robot = transform.getOrigin().x();
         double y_robot = transform.getOrigin().y();
 
