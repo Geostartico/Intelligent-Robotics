@@ -2,9 +2,12 @@
 #include <actionlib/client/simple_action_client.h>
 #include <actionlib/server/simple_action_server.h>
 #include <actionlib/client/terminal_state.h>
+#include <tf/transform_listener.h>
 #include <vector>
 #include <map>
 #include <cstdint>
+#include <thread>        
+#include <chrono>
 #include "assignment1/map_waypoints.h"
 #include "assignment1/apriltag_detect.h"
 #include "assignment1/WaypointMoveAction.h"
@@ -56,17 +59,16 @@ class Coordinator {
         std::vector<float> x, y;
         std::vector<std::pair<float, float>> waypoints;
         if(wp_client.call(srv)) {
-            ROS_INFO("map_waypoints_service call successful.");
+            ROS_INFO("Call to map_waypoints_service: SUCCESSFUL.");
             x = srv.response.x;
             y = srv.response.y;
             for (int i=0; i<x.size(); i++) {
                 waypoints.emplace_back(x[i], y[i]);
             }        
             ROS_INFO("Received %lu waypoints.", x.size());
-            // ROS_INFO("Last Waypoint received, x:%f y:%f", x[x.size() - 1], y[y.size() - 1]);
         }
         else {
-            ROS_ERROR("Failed to call service map_waypoints_service.");
+            ROS_ERROR("Call to service map_waypoints_service: FAILED.");
             return;
         }
 
@@ -74,14 +76,14 @@ class Coordinator {
         as_.publishFeedback(feedback_);
 
         // CHANGE WITH THE REAL CURRENT POS
-        std::pair<float,float> curr_pos = {0.0f, 0.0f};
+        std::pair<float,float> curr_pos = get_robot_pos();
         ROS_INFO("Initial position, x:%f y:%f", curr_pos.first, curr_pos.second);
 
         // Action client to send the waypoint goal
         WaypointMoveClient ac("move_to_goal", true);
-        ROS_INFO("Waiting for robot server to start...");
+        ROS_INFO("Waiting for Movemente_Handler server to start...");
         ac.waitForServer();
-        ROS_INFO("Robot server started, sending first waypoint.");
+        ROS_INFO("Movemente_Handler server started. Now looking for the closest waypoint.");
 
         int tot_waypoints = waypoints.size();
         int counter = 0;
@@ -102,7 +104,7 @@ class Coordinator {
             wp_goal.y = (*closest_it).second;
             ROS_INFO("Next Waypoint x:%f y:%f", wp_goal.x, wp_goal.y);
 
-            feedback_.status = {"Robot is navigating and scanning..."};
+            feedback_.status = {"Robot resumes navigation and scanning..."};
             as_.publishFeedback(feedback_);
 
             // Send the goal with result and feedback callbacks, and no active callback
@@ -116,26 +118,26 @@ class Coordinator {
             bool finished_before_timeout = ac.waitForResult(ros::Duration(500.0));
             if (finished_before_timeout) {
                 actionlib::SimpleClientGoalState state = ac.getState();
-                ROS_INFO("Waypoint reached: %s", state.toString().c_str());
+                ROS_INFO("Waypoint processing result: %s", state.toString().c_str());
             } else {
-                ROS_INFO("Waypoint not reached before the timeout.");
+                ROS_INFO("Waypoint not processed before the timeout.");
             }
 
-            // Update curr_pos with the closest point
-            curr_pos = *closest_it;
+            // Update curr_pos
+            curr_pos = get_robot_pos();
 
-            // Remove the closest point from the vector
+            // Remove the previous waypoint from the vector
             waypoints.erase(closest_it);
             
             ++counter;
-            feedback_.status = {"Robot has reached a waypoint: " + std::to_string(counter) + "/" + std::to_string(tot_waypoints) + " visited."};
+            feedback_.status = {"Robot has processed a waypoint (" + std::to_string(counter) + "/" + std::to_string(tot_waypoints) + ")."};
             as_.publishFeedback(feedback_);
 
             ros::ServiceClient ad_client = nh_.serviceClient<assignment1::apriltag_detect>("apriltags_detected_service");
             assignment1::apriltag_detect ad_srv;
 
             if(ad_client.call(ad_srv)) {
-                ROS_INFO("apriltags_detected_service call successful.");
+                ROS_INFO("Call to apriltags_detected_service: SUCCESSFUL.");
                 // TAGS FILTERING AND MANAGEMENT
                 std::vector<int> ids = ad_srv.response.ids;
                 for(int i=0; i<ids.size(); i++) {
@@ -147,7 +149,7 @@ class Coordinator {
                 }
             }
             else {
-                ROS_ERROR("Failed to call service apriltags_detected_service.");
+                ROS_ERROR("Call to apriltags_detected_service: FAILED.");
                 return;
             }
 
@@ -163,15 +165,16 @@ class Coordinator {
                     ids_list2 = ids_list2 + " " + std::to_string(id);
                 }
             }
-            feedback_.status = {"Apriltags search status: "+std::to_string(ids_counter)+"/"+std::to_string(ids.size()) ,
+            feedback_.status = {"Apriltags search current status: "+std::to_string(ids_counter)+"/"+std::to_string(ids.size()) ,
                                 "Apriltags found:  " + ids_list1,
                                 "Apriltags missing:" + ids_list2};
             as_.publishFeedback(feedback_);
         }
 
-        ROS_INFO("All Waypoints visited, coordinator node shuts down.");
-        feedback_.status = {"Robot visited every waypoint. Navigation and Scanning complete."};
+        ROS_INFO("All Waypoints processed, coordinator node shuts down.");
+        feedback_.status = {"Robot processed every waypoint. Navigation and Scanning operations completed."};
         as_.publishFeedback(feedback_);
+        std::this_thread::sleep_for (std::chrono::milliseconds(500));
 
         // RESULT ON ACTION
         std::vector<float> res_x;
@@ -195,6 +198,8 @@ class Coordinator {
         as_.setSucceeded(result_);
     }
 
+    private:
+
     // Feedback callback function
     void feedbackCallback(const FeedbackPtr& feedback) {
         ROS_INFO("Current robot status: %s", feedback->status.c_str());
@@ -210,6 +215,20 @@ class Coordinator {
 
     float distanceSquared(float x1, float y1, float x2, float y2) {
         return std::pow(x1 - x2, 2) + std::pow(y1 - y2, 2);
+    }
+
+    std::pair<float,float>  get_robot_pos() {
+        tf::StampedTransform transform;
+        tf::TransformListener listener;
+        listener.waitForTransform("map", "base_link", ros::Time(0), ros::Duration(3.0));
+        listener.lookupTransform("map", "base_link", ros::Time(0), transform);
+
+        float x = transform.getOrigin().x();
+        float y = transform.getOrigin().y();
+
+        std::pair<float, float> pos = {x, y};
+
+        return pos;
     }
 
 };
