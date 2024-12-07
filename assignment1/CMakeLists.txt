@@ -8,6 +8,7 @@ find_package(catkin REQUIRED COMPONENTS
   actionlib
   apriltag_ros
   geometry_msgs
+  tiago_iaslab_simulation
 )
 
 add_service_files(
