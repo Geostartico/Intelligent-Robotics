@@ -44,7 +44,7 @@ bool get_apriltags(){
 void detectionCallbackTF2(const apriltag_ros::AprilTagDetectionArrayConstPtr& msg)
 {
     ROS_INFO("YEP");
-  std::string target_frame = "base_link";
+  std::string target_frame = "map";
   std::string source_frame = msg->header.frame_id;
 
   tf2_ros::Buffer tfBuffer;
