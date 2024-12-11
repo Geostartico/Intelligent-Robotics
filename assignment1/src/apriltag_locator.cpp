@@ -17,6 +17,7 @@
 
 #include "assignment1/apriltag_detect.h"
 
+//after how many iterations to send the positions
 int NUM_ITER_SEND = 10;
 
 struct aprilmean{
@@ -26,8 +27,8 @@ struct aprilmean{
 };
 std::map<int, aprilmean> apriltags_detected;
 
-int n = 0;
-bool get_apriltags(){
+//function to send apriltags to the service
+bool send_apriltags(){
     ros::NodeHandle nh_;
     assignment1::apriltag_detect req;
     for(auto const &april : apriltags_detected){
@@ -41,58 +42,59 @@ bool get_apriltags(){
     ad_client.call(req);
     return true;
 }
-void detectionCallbackTF2(const apriltag_ros::AprilTagDetectionArrayConstPtr& msg)
-{
-    ROS_INFO("YEP");
-  std::string target_frame = "map";
-  std::string source_frame = msg->header.frame_id;
 
-  tf2_ros::Buffer tfBuffer;
-  tf2_ros::TransformListener tfListener(tfBuffer);
+int n = 0;
+void detectionCallback(const apriltag_ros::AprilTagDetectionArrayConstPtr& msg){
+    //we need the position in respect to the map
+    std::string target_frame = "map";
+    std::string source_frame = msg->header.frame_id;
 
-  while(!tfBuffer.canTransform(target_frame, source_frame, ros::Time(0)))
-    ros::Duration(0.5).sleep();
+    tf2_ros::Buffer tfBuffer;
+    tf2_ros::TransformListener tfListener(tfBuffer);
 
-  geometry_msgs::TransformStamped transformed = tfBuffer.lookupTransform(target_frame, source_frame, ros::Time(0), ros::Duration(1.0));
-  
-  //Transform available
-  geometry_msgs::PoseStamped pos_in;
+    while(!tfBuffer.canTransform(target_frame, source_frame, ros::Time(0)))
+        ros::Duration(0.05).sleep();
 
-  for(int i = 0; i < msg->detections.size(); ++i){
-      geometry_msgs::PoseStamped pos_out;
-      pos_in.header.frame_id = msg->detections.at(i).pose.header.frame_id;
-      pos_in.pose.position.x = msg->detections.at(i).pose.pose.pose.position.x;
-      pos_in.pose.position.y = msg->detections.at(i).pose.pose.pose.position.y;
-      pos_in.pose.position.z = msg->detections.at(i).pose.pose.pose.position.z;
-      pos_in.pose.orientation.x = msg->detections.at(i).pose.pose.pose.orientation.x;
-      pos_in.pose.orientation.y = msg->detections.at(i).pose.pose.pose.orientation.y;
-      pos_in.pose.orientation.z = msg->detections.at(i).pose.pose.pose.orientation.z;
-      pos_in.pose.orientation.w = msg->detections.at(i).pose.pose.pose.orientation.w;
+    geometry_msgs::TransformStamped transformed = tfBuffer.lookupTransform(target_frame, source_frame, ros::Time(0), ros::Duration(1.0));
 
-      tf2::doTransform(pos_in, pos_out, transformed);
+    geometry_msgs::PoseStamped pos_in;
 
-      ROS_INFO_STREAM("Obj with ID: " << msg->detections.at(i).id[0]);
-      ROS_INFO_STREAM("Original pose\n" << pos_in);
-      ROS_INFO_STREAM("Transformed pose\n" << pos_out);
-      if(apriltags_detected.find((int)(msg->detections.at(i).id[0])) == apriltags_detected.end()){
-          aprilmean tmp;
-          tmp.x = pos_out.pose.position.x;
-          tmp.y = pos_out.pose.position.y;
-          tmp.counter = 1;
-          apriltags_detected[msg->detections.at(i).id[0]] = tmp;
-      }
-      else
-          apriltags_detected.at(msg->detections.at(i).id[0]).x += pos_out.pose.position.x;
-          apriltags_detected.at(msg->detections.at(i).id[0]).y += pos_out.pose.position.y;
-          apriltags_detected.at(msg->detections.at(i).id[0]).counter++;
+    for(int i = 0; i < msg->detections.size(); ++i){
+        geometry_msgs::PoseStamped pos_out;
+        pos_in.header.frame_id = msg->detections.at(i).pose.header.frame_id;
+        pos_in.pose.position.x = msg->detections.at(i).pose.pose.pose.position.x;
+        pos_in.pose.position.y = msg->detections.at(i).pose.pose.pose.position.y;
+        pos_in.pose.position.z = msg->detections.at(i).pose.pose.pose.position.z;
+        pos_in.pose.orientation.x = msg->detections.at(i).pose.pose.pose.orientation.x;
+        pos_in.pose.orientation.y = msg->detections.at(i).pose.pose.pose.orientation.y;
+        pos_in.pose.orientation.z = msg->detections.at(i).pose.pose.pose.orientation.z;
+        pos_in.pose.orientation.w = msg->detections.at(i).pose.pose.pose.orientation.w;
 
-  }
-  n++;
-  if(NUM_ITER_SEND-n<=0){
-      n=0;
-      get_apriltags();
-  }
+        tf2::doTransform(pos_in, pos_out, transformed);
+
+        //insert the detection in the global vector
+        if(apriltags_detected.find((int)(msg->detections.at(i).id[0])) == apriltags_detected.end()){
+            aprilmean tmp;
+            tmp.x = pos_out.pose.position.x;
+            tmp.y = pos_out.pose.position.y;
+            tmp.counter = 1;
+            apriltags_detected[msg->detections.at(i).id[0]] = tmp;
+        }
+        else{
+            apriltags_detected.at(msg->detections.at(i).id[0]).x += pos_out.pose.position.x;
+            apriltags_detected.at(msg->detections.at(i).id[0]).y += pos_out.pose.position.y;
+            apriltags_detected.at(msg->detections.at(i).id[0]).counter++;
+        }
+
+    }
+    n++;
+    //send detections
+    if(NUM_ITER_SEND-n<=0){
+        n=0;
+        send_apriltags();
+    }
 }
+//function to move the head down in order to see the apriltags
 void lookDown() {
     actionlib::SimpleActionClient<control_msgs::PointHeadAction> client("/head_controller/point_head_action", true);
 
@@ -102,6 +104,7 @@ void lookDown() {
 
     control_msgs::PointHeadGoal goal;
 
+    //initialize the position the head must look at
     geometry_msgs::PointStamped target_point;
     target_point.header.frame_id = "base_link"; 
     target_point.header.stamp = ros::Time::now();
@@ -126,33 +129,22 @@ void lookDown() {
     if (finished_before_timeout) {
         ROS_INFO("Head movement succeeded.");
     } else {
-        ROS_WARN("Head movement did not finish before the timeout.");
+        ROS_ERROR("Head movement did not finish before the timeout");
     }
 }
 
 
 int main(int argc, char** argv)
 {
-  ros::init(argc, argv, "locate_apriltag");
-  ros::NodeHandle nh;
-  lookDown();
-  ROS_INFO_STREAM("locate_apriltag");
+    ros::init(argc, argv, "locate_apriltag");
+    ros::NodeHandle nh;
+    lookDown();
+    ROS_INFO_STREAM("locate_apriltag");
 
-  ros::Subscriber tag_subscriber;
-  
-  tag_subscriber = nh.subscribe("tag_detections", 10, detectionCallbackTF2);
-  ROS_INFO_STREAM("locate_apriltag");
+    ros::Subscriber tag_subscriber;
 
-  //ros::Rate loop_rate(5.0); 
-
-  //   while (ros::ok()) {
-  //       ROS_INFO("ye");
-  //       // Call spinOnce to process callbacks
-  //       ros::spinOnce();
-
-  //       // Sleep for the rest of the cycle
-  //       loop_rate.sleep();
-  //   }
+    tag_subscriber = nh.subscribe("tag_detections", 10, detectionCallback);
+    ROS_INFO_STREAM("locate_apriltag");
     ros::spin(); 
-  return 0;
+    return 0;
 }

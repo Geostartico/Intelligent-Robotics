@@ -17,26 +17,31 @@
 
 #include "assignment1/apriltag_detect.h"
 
+/*
+ * the following code is separated from the detector as if
+ * they were in the same node the service wouldn't respond
+ * 
+*/
+
 std::vector<int> ids;
 std::vector<float> x;
 std::vector<float> y;
 
-int n = 0;
 bool get_apriltags(assignment1::apriltag_detect::Request &req, assignment1::apriltag_detect::Response &res){
-    n++;
-    ROS_INFO("apriltag read: %d", n);
+    //the program saves the apriltags received from the detector
     if(!req.ids.empty()){
         ids=req.ids;
         x=req.x;
         y=req.y;
     }
+    //return the apriltags read up to now
     res.ids = ids;
     res.x = x;
     res.y = y;
     return true;
 }
-int main(int argc, char** argv)
-{
+
+int main(int argc, char** argv){
     ros::init(argc, argv, "locate_apriltag_service");
     ros::NodeHandle nh;
     ROS_INFO_STREAM("locate_apriltag");
