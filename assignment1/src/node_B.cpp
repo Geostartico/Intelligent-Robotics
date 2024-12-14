@@ -91,8 +91,9 @@ class Coordinator {
         ac.waitForServer();
         ROS_INFO("Movemente_Handler server started. Now looking for the closest waypoint.");
 
-        int tot_waypoints = waypoints.size();
-        int counter = 0;
+        std::vector<std::pair<float, float>> waypoints_backup = waypoints;
+        int counter = 0, searches_counter = 0;
+        const int MAX_SEARCHES = 3;
         while(waypoints.size() > 0) {
             auto closest_it = waypoints.begin();
             float min_distance = distanceSquared(curr_pos.first, curr_pos.second, closest_it->first, closest_it->second);
@@ -136,7 +137,7 @@ class Coordinator {
             waypoints.erase(closest_it);
             
             ++counter;
-            feedback_.status = {"Robot has processed a waypoint (" + std::to_string(counter) + "/" + std::to_string(tot_waypoints) + ")."};
+            feedback_.status = {"Robot has processed a waypoint (" + std::to_string(counter) + "/" + std::to_string(waypoints_backup.size()) + ")."};
             as_.publishFeedback(feedback_);
 
             ros::ServiceClient ad_client = nh_.serviceClient<assignment1::apriltag_detect>("apriltags_detected_service");
@@ -175,6 +176,19 @@ class Coordinator {
                                 "Apriltags found:  " + ids_list1,
                                 "Apriltags missing:" + ids_list2};
             as_.publishFeedback(feedback_);
+
+            if(waypoints.empty())
+                searches_counter++;
+
+            // If all waypoints were processed and NOT every AprilTag has been found, restart the search
+            if(searches_counter<MAX_SEARCHES && waypoints.empty() && !(ids.size() - ids_counter)) {
+                ROS_INFO("Search Attempt %d/%d: All waypoints processed but NOT all AprilTags found. Restarting the search.", searches_counter , MAX_SEARCHES);
+                feedback_.status = {"Robot Search Attempt " + std::to_string(searches_counter + 1) + "/" + std::to_string(MAX_SEARCHES) +
+                                    ": All waypoints processed but NOT all AprilTags found. Restarting the search."};
+                as_.publishFeedback(feedback_);
+                waypoints = waypoints_backup;
+                counter = 0;
+            }
         }
 
         ROS_INFO("All Waypoints processed, coordinator node shuts down.");
