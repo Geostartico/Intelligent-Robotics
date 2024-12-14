@@ -34,7 +34,7 @@ bool send_apriltags(){
     for(auto const &april : apriltags_detected){
         req.request.ids.push_back(april.first);
         float x_ = april.second.x/april.second.counter;
-        float y_ = april.second.x/april.second.counter;
+        float y_ = april.second.y/april.second.counter;
         req.request.x.push_back(x_);
         req.request.y.push_back(y_);
     }
