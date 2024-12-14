@@ -181,7 +181,7 @@ class Coordinator {
                 searches_counter++;
 
             // If all waypoints were processed and NOT every AprilTag has been found, restart the search
-            if(searches_counter<MAX_SEARCHES && waypoints.empty() && !(ids.size() - ids_counter)) {
+            if(searches_counter<MAX_SEARCHES && waypoints.empty() && (ids.size() - ids_counter)) {
                 ROS_INFO("Search Attempt %d/%d: All waypoints processed but NOT all AprilTags found. Restarting the search.", searches_counter , MAX_SEARCHES);
                 feedback_.status = {"Robot Search Attempt " + std::to_string(searches_counter + 1) + "/" + std::to_string(MAX_SEARCHES) +
                                     ": All waypoints processed but NOT all AprilTags found. Restarting the search."};
