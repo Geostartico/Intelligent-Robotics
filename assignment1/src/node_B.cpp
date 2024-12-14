@@ -13,6 +13,8 @@
 #include "assignment1/WaypointMoveAction.h"
 #include "assignment1/ApriltagSearchAction.h"
 
+const float MAX_CORRIDOR_X = 5.66;
+
 // Typedefs for better readability
 typedef actionlib::SimpleActionClient<assignment1::WaypointMoveAction> WaypointMoveClient;
 typedef assignment1::WaypointMoveFeedbackConstPtr FeedbackPtr;
@@ -27,11 +29,13 @@ class Coordinator {
     std::string action_name_;
     assignment1::ApriltagSearchFeedback feedback_;
     assignment1::ApriltagSearchResult result_;
+    bool custom_mcl_flag;
     
     public:
 
-    Coordinator(std::string name) : as_(nh_, name, boost::bind(&Coordinator::executeCB, this, _1), false), action_name_(name) 
+    Coordinator(std::string name, bool flag) : as_(nh_, name, boost::bind(&Coordinator::executeCB, this, _1), false), action_name_(name) 
     {
+        custom_mcl_flag = flag;
         as_.start();
     }
 
@@ -63,6 +67,8 @@ class Coordinator {
             x = srv.response.x;
             y = srv.response.y;
             for (int i=0; i<x.size(); i++) {
+                if(custom_mcl_flag && x[i] <= MAX_CORRIDOR_X)
+                    continue;
                 waypoints.emplace_back(x[i], y[i]);
             }        
             ROS_INFO("Received %lu waypoints.", x.size());
@@ -236,7 +242,17 @@ class Coordinator {
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "node_B");
-    Coordinator Coordinator("Apriltag_Search");
+    
+    if (argc < 2) {
+        ROS_ERROR("Error: At least one parameter is required.");
+        ROS_INFO("Usage: %s <mcl_flag> ", argv[0]);
+        return 1; 
+    }
+
+    std::string arg1(argv[1]);
+    bool mcl_flag = (arg1 == "1" || arg1 == "true");
+
+    Coordinator Coordinator("Apriltag_Search", mcl_flag);
     ros::spin();
     return 0;
 }

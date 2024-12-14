@@ -54,8 +54,7 @@ class MovementHandler
         void callbackOnGoal(const assignment1::WaypointMoveGoal::ConstPtr &goal)
         {
             if(custom_mcl_flag) {
-                ROS_INFO("INITIAL SPIN TO LOOK AROUND STARTING POS");
-                robospin();
+                // ADD INITIAL SPIN + ROS_INFO
 
                 ROS_INFO("CORRIDOR TRAVERSAL BEGUN - MOVING");
                 traverse_corridor();
@@ -81,12 +80,12 @@ class MovementHandler
             ros::Time start_time = ros::Time::now();
             ros::Duration timeout(20);
 
-            blackROI  table{6.78863,7.78863,-1.82448,-2.82448};
+            blackROI  fuckin_table{6.78863,7.78863,-1.82448,-2.82448};
             
             move_base_msgs::MoveBaseGoal  move_emergency_goal;
             move_emergency_goal.target_pose.header.frame_id = "map";
-            move_emergency_goal.target_pose.pose.position.x = table.x_max;
-            move_emergency_goal.target_pose.pose.position.y = table.y_max;
+            move_emergency_goal.target_pose.pose.position.x = fuckin_table.x_max;
+            move_emergency_goal.target_pose.pose.position.y = fuckin_table.y_max;
             move_emergency_goal.target_pose.pose.position.z = 0.0;
             move_emergency_goal.target_pose.header.stamp = ros::Time::now();
 
@@ -94,9 +93,10 @@ class MovementHandler
             move_emergency_goal.target_pose.pose.orientation.y = 0.0;
             move_emergency_goal.target_pose.pose.orientation.z = 0.0;
             move_emergency_goal.target_pose.pose.orientation.w = 1.0;
-
+            
             ros::Rate rate(10.0);
-            while (ros::ok()) {   
+            while (ros::ok())
+            {
                 robotPos currentPos = currentRobotPos();
                 
                 if ((ros::Time::now() - start_time) >  timeout)
@@ -108,7 +108,7 @@ class MovementHandler
                     return;
                 }
                 
-                char blackROIcheck = inBlackROI(goal->x, goal->y, currentPos.x_robot, currentPos.y_robot, table);
+                char blackROIcheck = inBlackROI(goal->x, goal->y, currentPos.x_robot, currentPos.y_robot, fuckin_table);
                 if (blackROIcheck!=0)
                 {
                     if(blackROIcheck ==  1)
@@ -133,54 +133,18 @@ class MovementHandler
                     ROS_INFO("NAV OK");
                     as.setSucceeded(result);
                     return;
-                } else if(move_base_client.getState() == actionlib::SimpleClientGoalState::ABORTED)
+                }else if(move_base_client.getState() == actionlib::SimpleClientGoalState::ABORTED)
                 {
                     result.reached = false;
                     ROS_ERROR("NAV FAIL");
                     as.setAborted(result);
                     return;
                 }
-
                 rate.sleep();
             }
         }
 
     private:
-
-    bool is_first_move = true;
-
-    void spin_util(double yaw){
-        move_base_msgs::MoveBaseGoal spin;
-
-        spin.target_pose.header.frame_id="base_link";
-        spin.target_pose.header.stamp=ros::Time::now();
-        spin.target_pose.pose.position.x=0.0;
-        spin.target_pose.pose.position.y=0.0;
-
-        tf2::Quaternion q;
-        q.setRPY(0,0,yaw);
-        spin.target_pose.pose.orientation.x=q.x();
-        spin.target_pose.pose.orientation.y=q.y();
-        spin.target_pose.pose.orientation.z=q.z();
-        spin.target_pose.pose.orientation.w=q.w();
-
-        move_base_client.sendGoal(spin);        
-
-        bool finished = move_base_client.waitForResult(ros::Duration(15.0));
-        if(!finished){
-            ROS_WARN("Spin unsuccesful");
-        } else {
-            ROS_WARN("Spinned");
-        }
-    }
-
-    void robospin() {
-        spin_util(M_PI);
-        ros::Duration(0.5).sleep();
-        spin_util(M_PI);
-        ros::Duration(0.5).sleep();
-        is_first_move = false;
-    }
 
     robotPos currentRobotPos()
     {
@@ -291,3 +255,4 @@ int main(int argc, char** argv) {
 
     return 0;
 }
+
