@@ -50,9 +50,6 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
-add_executable(waypoints_finder src/waypoints_finder.cpp)
-target_link_libraries(waypoints_finder ${catkin_LIBRARIES})
-
 add_executable(map_waypoints_service src/map_waypoints_service.cpp)
 add_dependencies(map_waypoints_service assignment1_generate_messages_cpp)
 target_link_libraries(map_waypoints_service ${catkin_LIBRARIES})
