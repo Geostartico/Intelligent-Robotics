@@ -11,8 +11,8 @@
 #include <geometry_msgs/Twist.h> 
 
 const float MAX_CORRIDOR_X = 5.66; 
-const float ANGULAR_VEL = 0.5;
-const float LINEAR_VEL = 0.75;
+const float ANGULAR_VEL = 0.3;
+const float LINEAR_VEL = 0.9;
 const float ANGLE_CONSIDERED = M_PI_4;
 
 typedef actionlib::SimpleActionServer<assignment1::WaypointMoveAction> Server;
@@ -56,6 +56,21 @@ class MovementHandler
             if(custom_mcl_flag) {
                 ROS_INFO("INITIAL SPIN TO LOOK AROUND STARTING POS");
                 robospin();
+
+                move_base_msgs::MoveBaseGoal  origin_goal;
+                origin_goal.target_pose.header.frame_id = "map";
+                origin_goal.target_pose.pose.position.x = 0.0;
+                origin_goal.target_pose.pose.position.y = 0.0;
+                origin_goal.target_pose.pose.position.z = 0.0;
+                origin_goal.target_pose.header.stamp = ros::Time::now();
+
+                origin_goal.target_pose.pose.orientation.x = 0.0;
+                origin_goal.target_pose.pose.orientation.y = 0.0;
+                origin_goal.target_pose.pose.orientation.z = 0.0;
+                origin_goal.target_pose.pose.orientation.w = 1.0;
+
+                move_base_client.sendGoal(origin_goal);
+                move_base_client.waitForResult(ros::Duration(15.0));
 
                 ROS_INFO("CORRIDOR TRAVERSAL BEGUN - MOVING");
                 traverse_corridor();
@@ -178,10 +193,12 @@ class MovementHandler
     }
 
     void robospin() {
-        spin_util(M_PI);
-        ros::Duration(0.5).sleep();
-        spin_util(M_PI);
-        ros::Duration(0.5).sleep();
+        spin_util((2.0/3.0)*M_PI);
+        ros::Duration(0.02).sleep();
+        spin_util((2.0/3.0)*M_PI);
+        ros::Duration(0.02).sleep();
+        spin_util((2.0/3.0)*M_PI);
+        ros::Duration(0.02).sleep();
         is_first_move = false;
     }
 
