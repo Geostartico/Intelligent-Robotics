@@ -12,7 +12,7 @@
 
 const float MAX_CORRIDOR_X = 5.66; 
 const float ANGULAR_VEL = 0.3;
-const float LINEAR_VEL = 0.9;
+const float LINEAR_VEL = 0.6;
 const float ANGLE_CONSIDERED = M_PI_4;
 
 typedef actionlib::SimpleActionServer<assignment1::WaypointMoveAction> Server;
@@ -260,8 +260,8 @@ class MovementHandler
             geometry_msgs::Twist vel; 
             vel.linear.x = LINEAR_VEL;
             sensor_msgs::LaserScanConstPtr laserScanMsg = ros::topic::waitForMessage<sensor_msgs::LaserScan>("scan", nh);
-            float left_mean = 0;
-            float right_mean = 0;
+            float left_mean = 1000;
+            float right_mean = 10000;
             float angle_min = laserScanMsg->angle_min;
             float angle_max = laserScanMsg->angle_max;
             float angle_increment = laserScanMsg->angle_increment;
@@ -270,25 +270,33 @@ class MovementHandler
             for(int i = (abs(angle_min) - M_PI_2)/angle_increment; 
                     i * angle_increment - (abs(angle_min) - M_PI_2) < ANGLE_CONSIDERED;
                     i++) {
-                right_mean += laserScanMsg->ranges[i]* cos(abs(angle_min+i*angle_increment));
+                //right_mean += laserScanMsg->ranges[i]* cos(abs(angle_min+i*angle_increment));
+                float cur = laserScanMsg->ranges[i]* abs(cos(abs(angle_min+i*angle_increment)));
+                if(cur<right_mean){
+                	right_mean=cur;
+                }
                 counter_right++;
             }
-            right_mean /= ANGLE_CONSIDERED/angle_increment;
+            //right_mean /= ANGLE_CONSIDERED/angle_increment;
 
             int counter_left = 0;
             for(int i = (abs(angle_min) + M_PI_2)/angle_increment; 
                     abs(i * angle_increment - abs(angle_min) - M_PI_2)  < ANGLE_CONSIDERED;
                     i--) {
-                left_mean += laserScanMsg->ranges[i]* cos(abs(angle_min+i*angle_increment));
+                //left_mean += laserScanMsg->ranges[i]* cos(abs(angle_min+i*angle_increment));
+                float cur = laserScanMsg->ranges[i]* abs(cos(abs(angle_min+i*angle_increment)));
+                if(cur<left_mean){
+                	left_mean=cur;
+                }
                 counter_left++;
             }
-            left_mean /= ANGLE_CONSIDERED/angle_increment;
+            //left_mean /= ANGLE_CONSIDERED/angle_increment;
             if(right_mean > left_mean)
                 vel.angular.z = -ANGULAR_VEL;
             else
                 vel.angular.z = ANGULAR_VEL;
             velPub.publish(vel);
-            //ROS_INFO("distance_mean left=%f  %d right=%f %d correct: %f", left_mean,counter_left, right_mean, counter_right, ANGLE_CONSIDERED/angle_increment);
+            ROS_ERROR("distance_mean left=%f  %d right=%f %d correct: %f", left_mean,counter_left, right_mean, counter_right, ANGLE_CONSIDERED/angle_increment);
         }
     }
 };
