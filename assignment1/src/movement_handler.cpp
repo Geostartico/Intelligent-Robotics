@@ -11,8 +11,8 @@
 #include <geometry_msgs/Twist.h> 
 
 const float MAX_CORRIDOR_X = 5.66; 
-const float ANGULAR_VEL = 0.2;
-const float LINEAR_VEL = 1;
+const float ANGULAR_VEL = 0.5;
+const float LINEAR_VEL = 0.75;
 const float ANGLE_CONSIDERED = M_PI_4;
 
 typedef actionlib::SimpleActionServer<assignment1::WaypointMoveAction> Server;
@@ -105,6 +105,7 @@ class MovementHandler
                     move_base_client.cancelGoal();
                     result.reached= false;
                     as.setAborted(result, "Timeout abort");
+                    robospin();
                     return;
                 }
                 
@@ -118,7 +119,7 @@ class MovementHandler
                         result.reached = false;
                         as.setAborted(result, "BlackROI abort");
                         return;
-                    }else if (blackROIcheck == 2)
+                    } else if (blackROIcheck == 2)
                     {
                         ROS_WARN("Movement in blackROI, redirecting...");
                         move_base_client.cancelGoal();
@@ -132,12 +133,14 @@ class MovementHandler
                     result.reached=true;
                     ROS_INFO("NAV OK");
                     as.setSucceeded(result);
+                    robospin();
                     return;
                 } else if(move_base_client.getState() == actionlib::SimpleClientGoalState::ABORTED)
                 {
                     result.reached = false;
                     ROS_ERROR("NAV FAIL");
                     as.setAborted(result);
+                    robospin();
                     return;
                 }
 
