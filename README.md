@@ -1,6 +1,6 @@
 # README #
 
-###GROUP 02 
+### GROUP 02 
 
 Artico Giovanni, [giovanni.artico@studenti.unipd.it](mailto:giovanni.artico@studenti.unipd.it)
 
