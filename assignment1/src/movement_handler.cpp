@@ -92,6 +92,9 @@ class MovementHandler
             ros::Time start_time = ros::Time::now();
             ros::Duration timeout(20);
 
+            /*coordinates obtained from RViz, following the map reference, 2m size to avoid collision.
+            *the emergency waypoints allow redirection on the outer perimeter of the ROI
+            */
             blackROI  table{6.28863,8.28863,-1.32448,-3.32448};
             
             move_base_msgs::MoveBaseGoal  move_emergency_goal_up;
@@ -136,6 +139,7 @@ class MovementHandler
                 {
                     if(blackROIcheck ==  1)
                     {
+                        //waypoint generated inside of black ROI and deleted without even starting movement
                         move_base_client.cancelGoal();
                         result.reached = false;
                         as.setAborted(result, "BlackROI abort");
@@ -143,6 +147,7 @@ class MovementHandler
                     } else if (blackROIcheck == 2)
                     {
                         move_base_client.cancelGoal();
+                        //if robot moves inside of the ROI during navigation, it will move to the closest waypoint first.
                         if(currentPos.y_robot > table.y_lower)
                         {
                             move_base_client.sendGoal(move_emergency_goal_up);
@@ -155,7 +160,7 @@ class MovementHandler
                         move_base_client.sendGoal(move_goal);
                     }
                 }
-
+                        //returns for node_B
                 if(move_base_client.getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
                 {
                     result.reached=true;
@@ -177,7 +182,8 @@ class MovementHandler
     private:
 
     bool is_first_move = true;
-
+    
+    //spin utils ans robospin separated, the first one executes a defined angle position, robospin sums angles to perform a 360° rotation. details in report
     void spin_util(double yaw){
         move_base_msgs::MoveBaseGoal spin;
         spin.target_pose.header.frame_id="base_link";
