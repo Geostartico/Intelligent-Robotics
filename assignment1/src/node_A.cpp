@@ -30,15 +30,17 @@ int main(int argc, char **argv) {
     ros::init(argc, argv, "node_A");
     ros::NodeHandle n;
 
+    // Service client to obtain the IDs to find
     ros::ServiceClient ids_client = n.serviceClient<tiago_iaslab_simulation::Objs>("/apriltag_ids_srv");
     tiago_iaslab_simulation::Objs srv;
     srv.request.ready = true;
 
+    // Request the IDs
     std::vector<int> ids;
     if(ids_client.call(srv)) {
         ROS_INFO("ids_generator_node call successful.");
         ids = srv.response.ids;
-        ROS_INFO("Received %lu AprilTag ids.", ids.size());
+        ROS_INFO("Received %lu AprilTag ids:", ids.size());
     }
     else {
         ROS_ERROR("Failed to call service ids_generator_node.");
@@ -48,6 +50,7 @@ int main(int argc, char **argv) {
     for(int i : ids)
         ROS_INFO("Tag: %u", i);
 
+    // Action client to request the search of the wanted IDs
     ApriltagSearchClient ac("Apriltag_Search", true);
     ROS_INFO("Waiting for Apriltag_Search server to start...");
     ac.waitForServer();
@@ -61,9 +64,9 @@ int main(int argc, char **argv) {
     bool finished_before_timeout = ac.waitForResult(ros::Duration(500.0));
     if (finished_before_timeout) {
         actionlib::SimpleClientGoalState state = ac.getState();
-        ROS_INFO("Apriltag Search completed: %s", state.toString().c_str());
+        ROS_INFO("AprilTags search completed: TASK %s", state.toString().c_str());
     } else {
-        ROS_INFO("Apriltag Search failed.");
+        ROS_INFO("AprilTags search NOT finished before timeout.");
     }
         
     return 0;
