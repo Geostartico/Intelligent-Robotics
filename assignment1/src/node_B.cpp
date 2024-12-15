@@ -93,6 +93,7 @@ class Coordinator {
 
         std::vector<std::pair<float, float>> waypoints_backup = waypoints;
         int counter = 0, searches_counter = 0;
+        bool breaked_flag = false;
         const int MAX_SEARCHES = 3;
         while(waypoints.size() > 0) {
             auto closest_it = waypoints.begin();
@@ -111,7 +112,7 @@ class Coordinator {
             wp_goal.y = (*closest_it).second;
             ROS_INFO("Next Waypoint x:%f y:%f", wp_goal.x, wp_goal.y);
 
-            feedback_.status = {"Robot resumes navigation and scanning..."};
+            feedback_.status = {"Robot moves towards the next waypoint while scanning the environment."};
             as_.publishFeedback(feedback_);
 
             // Send the goal with result and feedback callbacks, and no active callback
@@ -122,7 +123,7 @@ class Coordinator {
                 boost::bind(&Coordinator::feedbackCallback, this, _1)
             );
 
-            bool finished_before_timeout = ac.waitForResult(ros::Duration(500.0));
+            bool finished_before_timeout = ac.waitForResult(ros::Duration(50.0));
             if (finished_before_timeout) {
                 actionlib::SimpleClientGoalState state = ac.getState();
                 ROS_INFO("Waypoint processing result: %s", state.toString().c_str());
@@ -138,6 +139,9 @@ class Coordinator {
             
             ++counter;
             feedback_.status = {"Robot has processed a waypoint (" + std::to_string(counter) + "/" + std::to_string(waypoints_backup.size()) + ")."};
+            as_.publishFeedback(feedback_);
+
+            feedback_.status = {"Robot looks around itself by doing a 360° turn."};
             as_.publishFeedback(feedback_);
 
             ros::ServiceClient ad_client = nh_.serviceClient<assignment1::apriltag_detect>("apriltags_detected_service");
@@ -177,6 +181,11 @@ class Coordinator {
                                 "Apriltags missing:" + ids_list2};
             as_.publishFeedback(feedback_);
 
+            if(!(ids.size() - ids_counter)) {
+                breaked_flag = true;
+                break;
+            }
+
             if(waypoints.empty())
                 searches_counter++;
 
@@ -191,10 +200,17 @@ class Coordinator {
             }
         }
 
-        ROS_INFO("All Waypoints processed, coordinator node shuts down.");
-        feedback_.status = {"Robot processed every waypoint. Navigation and Scanning operations completed."};
-        as_.publishFeedback(feedback_);
-        std::this_thread::sleep_for (std::chrono::milliseconds(500));
+        if(breaked_flag) {
+            ROS_INFO("All AprilTags detected, coordinator node shuts down.");
+            feedback_.status = {"Robot found all wanted AprilTags. Navigation and Scanning operations completed."};
+            as_.publishFeedback(feedback_);
+        }
+        else {
+            ROS_INFO("All Waypoints processed, coordinator node shuts down.");
+            feedback_.status = {"Robot processed every waypoint. Navigation and Scanning operations completed."};
+            as_.publishFeedback(feedback_);
+        }
+        ros::Duration(0.5).sleep();
 
         // RESULT ON ACTION
         std::vector<float> res_x;
