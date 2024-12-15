@@ -23,7 +23,6 @@ struct blackROI{
     double y_lower;
     double y_max;
 };
-
 struct  robotPos{
     double x_robot;
     double y_robot;
@@ -54,7 +53,6 @@ class MovementHandler
         void callbackOnGoal(const assignment1::WaypointMoveGoal::ConstPtr &goal)
         {
             if(custom_mcl_flag) {
-                ROS_INFO("INITIAL SPIN TO LOOK AROUND STARTING POS");
                 robospin();
 
                 move_base_msgs::MoveBaseGoal  origin_goal;
@@ -72,13 +70,11 @@ class MovementHandler
                 move_base_client.sendGoal(origin_goal);
                 move_base_client.waitForResult(ros::Duration(15.0));
 
-                ROS_INFO("CORRIDOR TRAVERSAL BEGUN - MOVING");
                 traverse_corridor();
 
                 custom_mcl_flag = false;
             }
-
-            ROS_INFO("GOAL RECEIVED - MOVING");
+;
             move_base_msgs::MoveBaseGoal  move_goal;
             move_goal.target_pose.header.frame_id = "map";
             move_goal.target_pose.pose.position.x = goal->x;
@@ -96,19 +92,31 @@ class MovementHandler
             ros::Time start_time = ros::Time::now();
             ros::Duration timeout(20);
 
-            blackROI  table{6.78863,7.78863,-1.82448,-2.82448};
+            blackROI  table{6.28863,8.28863,-1.32448,-3.32448};
             
-            move_base_msgs::MoveBaseGoal  move_emergency_goal;
-            move_emergency_goal.target_pose.header.frame_id = "map";
-            move_emergency_goal.target_pose.pose.position.x = table.x_max;
-            move_emergency_goal.target_pose.pose.position.y = table.y_max;
-            move_emergency_goal.target_pose.pose.position.z = 0.0;
-            move_emergency_goal.target_pose.header.stamp = ros::Time::now();
+            move_base_msgs::MoveBaseGoal  move_emergency_goal_up;
+            move_emergency_goal_up.target_pose.header.frame_id = "map";
+            move_emergency_goal_up.target_pose.pose.position.x = table.x_max;
+            move_emergency_goal_up.target_pose.pose.position.y = table.y_max;
+            move_emergency_goal_up.target_pose.pose.position.z = 0.0;
+            move_emergency_goal_up.target_pose.header.stamp = ros::Time::now();
 
-            move_emergency_goal.target_pose.pose.orientation.x = 0.0;
-            move_emergency_goal.target_pose.pose.orientation.y = 0.0;
-            move_emergency_goal.target_pose.pose.orientation.z = 0.0;
-            move_emergency_goal.target_pose.pose.orientation.w = 1.0;
+            move_emergency_goal_up.target_pose.pose.orientation.x = 0.0;
+            move_emergency_goal_up.target_pose.pose.orientation.y = 0.0;
+            move_emergency_goal_up.target_pose.pose.orientation.z = 0.0;
+            move_emergency_goal_up.target_pose.pose.orientation.w = 1.0;
+
+            move_base_msgs::MoveBaseGoal  move_emergency_goal_down;
+            move_emergency_goal_down.target_pose.header.frame_id = "map";
+            move_emergency_goal_down.target_pose.pose.position.x = table.x_max;
+            move_emergency_goal_down.target_pose.pose.position.y = table.y_lower;
+            move_emergency_goal_down.target_pose.pose.position.z = 0.0;
+            move_emergency_goal_down.target_pose.header.stamp = ros::Time::now();
+
+            move_emergency_goal_down.target_pose.pose.orientation.x = 0.0;
+            move_emergency_goal_down.target_pose.pose.orientation.y = 0.0;
+            move_emergency_goal_down.target_pose.pose.orientation.z = 0.0;
+            move_emergency_goal_down.target_pose.pose.orientation.w = 1.0;
 
             ros::Rate rate(10.0);
             while (ros::ok()) {   
@@ -116,7 +124,6 @@ class MovementHandler
                 
                 if ((ros::Time::now() - start_time) >  timeout)
                 {
-                    ROS_ERROR("Navigation timed out - Cancelling goal...");
                     move_base_client.cancelGoal();
                     result.reached= false;
                     as.setAborted(result, "Timeout abort");
@@ -129,16 +136,22 @@ class MovementHandler
                 {
                     if(blackROIcheck ==  1)
                     {
-                        ROS_WARN("Waypoint generated inside black ROI, deleting...");
                         move_base_client.cancelGoal();
                         result.reached = false;
                         as.setAborted(result, "BlackROI abort");
                         return;
                     } else if (blackROIcheck == 2)
                     {
-                        ROS_WARN("Movement in blackROI, redirecting...");
                         move_base_client.cancelGoal();
-                        move_base_client.sendGoal(move_emergency_goal);
+                        if(currentPos.y_robot > table.y_lower)
+                        {
+                            move_base_client.sendGoal(move_emergency_goal_up);
+                            move_base_client.sendGoal(move_emergency_goal_down);
+                        } else
+                        {
+                            move_base_client.sendGoal(move_emergency_goal_down);
+                            move_base_client.sendGoal(move_emergency_goal_up);
+                        }
                         move_base_client.sendGoal(move_goal);
                     }
                 }
@@ -146,14 +159,12 @@ class MovementHandler
                 if(move_base_client.getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
                 {
                     result.reached=true;
-                    ROS_INFO("NAV OK");
                     as.setSucceeded(result);
                     robospin();
                     return;
                 } else if(move_base_client.getState() == actionlib::SimpleClientGoalState::ABORTED)
                 {
                     result.reached = false;
-                    ROS_ERROR("NAV FAIL");
                     as.setAborted(result);
                     robospin();
                     return;
@@ -169,12 +180,10 @@ class MovementHandler
 
     void spin_util(double yaw){
         move_base_msgs::MoveBaseGoal spin;
-
         spin.target_pose.header.frame_id="base_link";
         spin.target_pose.header.stamp=ros::Time::now();
         spin.target_pose.pose.position.x=0.0;
         spin.target_pose.pose.position.y=0.0;
-
         tf2::Quaternion q;
         q.setRPY(0,0,yaw);
         spin.target_pose.pose.orientation.x=q.x();
@@ -185,11 +194,6 @@ class MovementHandler
         move_base_client.sendGoal(spin);        
 
         bool finished = move_base_client.waitForResult(ros::Duration(15.0));
-        if(!finished){
-            ROS_WARN("Spin unsuccesful");
-        } else {
-            ROS_WARN("Spinned");
-        }
     }
 
     void robospin() {
@@ -220,17 +224,11 @@ class MovementHandler
     char inBlackROI(double x_goal, double y_goal, double x_robot, double y_robot,blackROI& ROI)
     {
 
-        ROS_INFO("BLACKROI coord: xl:%f xm:%f yl:%f ym:%f", ROI.x_lower, ROI.x_max, ROI.y_lower, ROI.y_max);
-        ROS_INFO("GOAL coord:      x:%f  y:%f", x_goal, y_goal);
-        ROS_INFO("ROBOT coord :    x:%f  y:%f", x_robot, y_robot);
-
         if(x_goal>= ROI.x_lower && x_goal<= ROI.x_max && y_goal >= ROI.y_max && y_goal <= ROI.y_lower)
         {
-            ROS_WARN("Waypoint is in a BlackROI, movement aborted");
             return 1;
         } else if(x_robot >= ROI.x_lower && x_robot <= ROI.x_max && y_robot >= ROI.y_max && y_robot <= ROI.y_lower)
         {
-            ROS_WARN("Robot entered a BlackROI, movement redirected");
             return 2;
         }  else
         {
@@ -242,14 +240,11 @@ class MovementHandler
         ros::NodeHandle nh;
         ros::Publisher velPub = nh.advertise<geometry_msgs::Twist>("/mobile_base_controller/cmd_vel", 1);
         // Wait for the first message on the amcl_pose topic
-        ROS_INFO("Waiting for a message on the 'amcl_pose' topic...");
         boost::shared_ptr<geometry_msgs::PoseWithCovarianceStamped const> msg;
         while(ros::ok()){
             msg = ros::topic::waitForMessage<geometry_msgs::PoseWithCovarianceStamped>("amcl_pose", nh);
             double x_pos = msg->pose.pose.position.x;
-            ROS_INFO("pose x: %f", x_pos);
             if(x_pos > MAX_CORRIDOR_X) {
-                ROS_INFO("already out");
                 return;
             }
             // Extract quaternion
@@ -265,38 +260,31 @@ class MovementHandler
             float angle_min = laserScanMsg->angle_min;
             float angle_max = laserScanMsg->angle_max;
             float angle_increment = laserScanMsg->angle_increment;
-            //ROS_INFO("angle_min: %f, angle_max: %f, angle_increment: %f", angle_min, angle_max, angle_increment);
             int counter_right = 0;
             for(int i = (abs(angle_min) - M_PI_2)/angle_increment; 
                     i * angle_increment - (abs(angle_min) - M_PI_2) < ANGLE_CONSIDERED;
                     i++) {
-                //right_mean += laserScanMsg->ranges[i]* cos(abs(angle_min+i*angle_increment));
                 float cur = laserScanMsg->ranges[i]* abs(cos(abs(angle_min+i*angle_increment)));
                 if(cur<right_mean){
                 	right_mean=cur;
                 }
                 counter_right++;
             }
-            //right_mean /= ANGLE_CONSIDERED/angle_increment;
-
             int counter_left = 0;
             for(int i = (abs(angle_min) + M_PI_2)/angle_increment; 
                     abs(i * angle_increment - abs(angle_min) - M_PI_2)  < ANGLE_CONSIDERED;
                     i--) {
-                //left_mean += laserScanMsg->ranges[i]* cos(abs(angle_min+i*angle_increment));
                 float cur = laserScanMsg->ranges[i]* abs(cos(abs(angle_min+i*angle_increment)));
                 if(cur<left_mean){
                 	left_mean=cur;
                 }
                 counter_left++;
             }
-            //left_mean /= ANGLE_CONSIDERED/angle_increment;
             if(right_mean > left_mean)
                 vel.angular.z = -ANGULAR_VEL;
             else
                 vel.angular.z = ANGULAR_VEL;
             velPub.publish(vel);
-            ROS_ERROR("distance_mean left=%f  %d right=%f %d correct: %f", left_mean,counter_left, right_mean, counter_right, ANGLE_CONSIDERED/angle_increment);
         }
     }
 };
