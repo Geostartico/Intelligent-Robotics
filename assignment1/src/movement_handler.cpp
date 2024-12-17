@@ -49,12 +49,13 @@ class MovementHandler
                 custom_mcl_flag = flag;
                 as.start();
             }
-    
+
         void callbackOnGoal(const assignment1::WaypointMoveGoal::ConstPtr &goal)
         {
             if(custom_mcl_flag) {
                 robospin();
 
+                //origin position is saved to reset robot initial state after spinning, avoids collision while running mcl
                 move_base_msgs::MoveBaseGoal  origin_goal;
                 origin_goal.target_pose.header.frame_id = "map";
                 origin_goal.target_pose.pose.position.x = 0.0;
@@ -75,6 +76,7 @@ class MovementHandler
                 custom_mcl_flag = false;
             }
 ;
+            //loads waypoint from action and stores it in a variable, sent to movebase and used for redirections
             move_base_msgs::MoveBaseGoal  move_goal;
             move_goal.target_pose.header.frame_id = "map";
             move_goal.target_pose.pose.position.x = goal->x;
@@ -93,7 +95,7 @@ class MovementHandler
             ros::Duration timeout(20);
 
             /*coordinates obtained from RViz, following the map reference, 2m size to avoid collision.
-            *the emergency waypoints allow redirection on the outer perimeter of the ROI
+            *saving bottom and top left corners as emergency waypoints allow redirection on the outer perimeter of the ROI
             */
             blackROI  table{6.28863,8.28863,-1.32448,-3.32448};
             
@@ -147,7 +149,9 @@ class MovementHandler
                     } else if (blackROIcheck == 2)
                     {
                         move_base_client.cancelGoal();
-                        //if robot moves inside of the ROI during navigation, it will move to the closest waypoint first.
+                        /*if robot moves inside of the ROI during navigation, it will move to the closest waypoint first.
+                        *left picked to avoid getting stuck in the wall. take top or bottom first relating to current y position
+                        */
                         if(currentPos.y_robot > table.y_lower)
                         {
                             move_base_client.sendGoal(move_emergency_goal_up);
