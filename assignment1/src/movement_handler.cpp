@@ -74,8 +74,7 @@ class MovementHandler
                 traverse_corridor();
 
                 custom_mcl_flag = false;
-            }
-;
+            };
             //loads waypoint from action and stores it in a variable, sent to movebase and used for redirections
             move_base_msgs::MoveBaseGoal  move_goal;
             move_goal.target_pose.header.frame_id = "map";
@@ -98,31 +97,8 @@ class MovementHandler
             *saving bottom and top left corners as emergency waypoints allow redirection on the outer perimeter of the ROI
             */
             // blackROI  table{6.28863,8.28863,-1.32448,-3.32448}; //OLD_ONE
-            blackROI  table{6.78863,8.78863,-1.82448,-3.82448};
+            blackROI  table{5.78863,8.78863,-0.82448,-3.82448};
             
-            move_base_msgs::MoveBaseGoal  move_emergency_goal_up;
-            move_emergency_goal_up.target_pose.header.frame_id = "map";
-            move_emergency_goal_up.target_pose.pose.position.x = table.x_max;
-            move_emergency_goal_up.target_pose.pose.position.y = table.y_max;
-            move_emergency_goal_up.target_pose.pose.position.z = 0.0;
-            move_emergency_goal_up.target_pose.header.stamp = ros::Time::now();
-
-            move_emergency_goal_up.target_pose.pose.orientation.x = 0.0;
-            move_emergency_goal_up.target_pose.pose.orientation.y = 0.0;
-            move_emergency_goal_up.target_pose.pose.orientation.z = 0.0;
-            move_emergency_goal_up.target_pose.pose.orientation.w = 1.0;
-
-            move_base_msgs::MoveBaseGoal  move_emergency_goal_down;
-            move_emergency_goal_down.target_pose.header.frame_id = "map";
-            move_emergency_goal_down.target_pose.pose.position.x = table.x_max;
-            move_emergency_goal_down.target_pose.pose.position.y = table.y_lower;
-            move_emergency_goal_down.target_pose.pose.position.z = 0.0;
-            move_emergency_goal_down.target_pose.header.stamp = ros::Time::now();
-
-            move_emergency_goal_down.target_pose.pose.orientation.x = 0.0;
-            move_emergency_goal_down.target_pose.pose.orientation.y = 0.0;
-            move_emergency_goal_down.target_pose.pose.orientation.z = 0.0;
-            move_emergency_goal_down.target_pose.pose.orientation.w = 1.0;
 
             ros::Rate rate(10.0);
             while (ros::ok()) {   
@@ -137,34 +113,8 @@ class MovementHandler
                     return;
                 }
                 
-                char blackROIcheck = inBlackROI(goal->x, goal->y, currentPos.x_robot, currentPos.y_robot, table);
-                if (blackROIcheck!=0)
-                {
-                    if(blackROIcheck ==  1)
-                    {
-                        //waypoint generated inside of black ROI and deleted without even starting movement
-                        move_base_client.cancelGoal();
-                        result.reached = false;
-                        as.setAborted(result, "BlackROI abort");
-                        return;
-                    } else if (blackROIcheck == 2)
-                    {
-                        move_base_client.cancelGoal();
-                        /*if robot moves inside of the ROI during navigation, it will move to the closest waypoint first.
-                        *left picked to avoid getting stuck in the wall. take top or bottom first relating to current y position
-                        */
-                        if(currentPos.y_robot > table.y_lower)
-                        {
-                            move_base_client.sendGoal(move_emergency_goal_up);
-                            move_base_client.sendGoal(move_emergency_goal_down);
-                        } else
-                        {
-                            move_base_client.sendGoal(move_emergency_goal_down);
-                            move_base_client.sendGoal(move_emergency_goal_up);
-                        }
-                        move_base_client.sendGoal(move_goal);
-                    }
-                }
+                if(inBlackROI(goal->x, goal->y, currentPos.x_robot, currentPos.y_robot, table)) return;
+                
                         //returns for node_B
                 if(move_base_client.getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
                 {
@@ -232,20 +182,95 @@ class MovementHandler
         return(current);
     };
 
-    char inBlackROI(double x_goal, double y_goal, double x_robot, double y_robot,blackROI& ROI)
+    bool inBlackROI(double x_goal, double y_goal, double x_robot, double y_robot,blackROI& ROI)
     {
+        ROS_ERROR("ENTRA IN check");
 
         if(x_goal>= ROI.x_lower && x_goal<= ROI.x_max && y_goal >= ROI.y_max && y_goal <= ROI.y_lower)
         {
-            return 1;
+            ROS_ERROR("ENTRA IN spawnato down");
+            
+            result.reached = false;
+            move_base_client.cancelGoal();
+            as.setAborted(result, "Spawn in roi abort");
+            return true;
         } else if(x_robot >= ROI.x_lower && x_robot <= ROI.x_max && y_robot >= ROI.y_max && y_robot <= ROI.y_lower)
         {
-            return 2;
-        }  else
-        {
-            return 0;
+            ROS_ERROR("ENTRA IN roi");
+            move_base_client.cancelGoal();
+            as.setAborted(result, "Spawn in roi abort");
+            bool finished;
+
+            move_base_msgs::MoveBaseGoal  move_emergency_goal_up;
+            move_emergency_goal_up.target_pose.header.frame_id = "map";
+            move_emergency_goal_up.target_pose.pose.position.x = ROI.x_max + 1.5;
+            move_emergency_goal_up.target_pose.pose.position.y = ROI.y_max - 1;
+            move_emergency_goal_up.target_pose.pose.position.z = 0.0;
+            move_emergency_goal_up.target_pose.header.stamp = ros::Time::now();
+
+            move_emergency_goal_up.target_pose.pose.orientation.x = 0.0;
+            move_emergency_goal_up.target_pose.pose.orientation.y = 0.0;
+            move_emergency_goal_up.target_pose.pose.orientation.z = 0.0;
+            move_emergency_goal_up.target_pose.pose.orientation.w = 1.0;
+
+            move_base_msgs::MoveBaseGoal  move_emergency_goal_down;
+            move_emergency_goal_down.target_pose.header.frame_id = "map";
+            move_emergency_goal_down.target_pose.pose.position.x = ROI.x_max + 1.5;
+            move_emergency_goal_down.target_pose.pose.position.y = ROI.y_lower + 1;
+            move_emergency_goal_down.target_pose.pose.position.z = 0.0;
+            move_emergency_goal_down.target_pose.header.stamp = ros::Time::now();
+
+            move_emergency_goal_down.target_pose.pose.orientation.x = 0.0;
+            move_emergency_goal_down.target_pose.pose.orientation.y = 0.0;
+            move_emergency_goal_down.target_pose.pose.orientation.z = 0.0;
+            move_emergency_goal_down.target_pose.pose.orientation.w = 1.0;
+
+            move_base_msgs::MoveBaseGoal  og_move_goal;
+            move_emergency_goal_down.target_pose.header.frame_id = "map";
+            move_emergency_goal_down.target_pose.pose.position.x = x_goal;
+            move_emergency_goal_down.target_pose.pose.position.y = y_goal;
+            move_emergency_goal_down.target_pose.pose.position.z = 0.0;
+            move_emergency_goal_down.target_pose.header.stamp = ros::Time::now();
+
+            move_emergency_goal_down.target_pose.pose.orientation.x = 0.0;
+            move_emergency_goal_down.target_pose.pose.orientation.y = 0.0;
+            move_emergency_goal_down.target_pose.pose.orientation.z = 0.0;
+            move_emergency_goal_down.target_pose.pose.orientation.w = 1.0;
+
+            /*if robot moves inside of the ROI during navigation, it will move to the closest waypoint first.
+            *left picked to avoid getting stuck in the wall. take top or bottom first relating to current y position
+            */
+            if(y_robot > ROI.y_lower)
+            {   ROS_ERROR("DA SOPRA A SOTTO");
+                move_base_client.sendGoal(move_emergency_goal_up);
+                finished = move_base_client.waitForResult(ros::Duration(15.0));
+                if(finished) {ROS_ERROR("WAYPOINT EMERGENCY UP OK");}
+                else ROS_ERROR("cazzo");
+                ros::Duration(0.02).sleep();
+                move_base_client.sendGoal(move_emergency_goal_down);
+                finished = move_base_client.waitForResult(ros::Duration(15.0));
+                if(finished) {ROS_ERROR("WAYPOINT EMERGENCY DOWN OK");}
+                else ROS_ERROR("cazzo");
+                ros::Duration(0.02).sleep();
+            } else
+            {
+                ROS_ERROR("DA SOTTO A SOPRA");
+                move_base_client.sendGoal(move_emergency_goal_down);
+                finished = move_base_client.waitForResult(ros::Duration(15.0));
+                if(finished) {ROS_ERROR("WAYPOINT EMERGENCY DOWN OK");}
+                else ROS_ERROR("cazzo");
+                ros::Duration(0.02).sleep();
+                move_base_client.sendGoal(move_emergency_goal_up);
+                finished = move_base_client.waitForResult(ros::Duration(15.0));
+                if(finished) {ROS_ERROR("WAYPOINT EMERGENCY UP OK");}
+                else ROS_ERROR("cazzo");
+                ros::Duration(0.02).sleep();
+            }
+            move_base_client.sendGoal(og_move_goal);
+            ros::Duration(0.02).sleep();
         }
-    }
+        return false; 
+    };
 
     void traverse_corridor() {
         ros::NodeHandle nh;
