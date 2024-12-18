@@ -97,7 +97,8 @@ class MovementHandler
             /*coordinates obtained from RViz, following the map reference, 2m size to avoid collision.
             *saving bottom and top left corners as emergency waypoints allow redirection on the outer perimeter of the ROI
             */
-            blackROI  table{6.28863,8.28863,-1.32448,-3.32448};
+            // blackROI  table{6.28863,8.28863,-1.32448,-3.32448}; //OLD_ONE
+            blackROI  table{6.78863,8.78863,-1.82448,-3.82448};
             
             move_base_msgs::MoveBaseGoal  move_emergency_goal_up;
             move_emergency_goal_up.target_pose.header.frame_id = "map";

@@ -83,6 +83,12 @@ class Coordinator {
             return;
         }
 
+        waypointsSorting(waypoints, TILE_DIM);
+        ROS_INFO("WAYPOINTS TEST");
+        for(auto w : waypoints) {
+            ROS_INFO("x:%f y:%f", w.first, w.second);
+        }
+
         feedback_.status = {"Waypoints loaded, Robot starts the navigation."};
         as_.publishFeedback(feedback_);
 
@@ -103,15 +109,15 @@ class Coordinator {
         while(waypoints.size() > 0) {
             // The closest waypoint to the current robot position is found
             auto closest_it = waypoints.begin();
-            float min_distance = distanceSquared(curr_pos.first, curr_pos.second, closest_it->first, closest_it->second);
+            // float min_distance = distanceSquared(curr_pos.first, curr_pos.second, closest_it->first, closest_it->second);
 
-            for (auto it = waypoints.begin() + 1; it != waypoints.end(); ++it) {
-                float dist = distanceSquared(curr_pos.first, curr_pos.second, it->first, it->second);
-                if (dist < min_distance) {
-                    min_distance = dist;
-                    closest_it = it;
-                }
-            }
+            // for (auto it = waypoints.begin() + 1; it != waypoints.end(); ++it) {
+            //     float dist = distanceSquared(curr_pos.first, curr_pos.second, it->first, it->second);
+            //     if (dist < min_distance) {
+            //         min_distance = dist;
+            //         closest_it = it;
+            //     }
+            // }
 
             assignment1::WaypointMoveGoal wp_goal;
             wp_goal.x = (*closest_it).first;
@@ -124,7 +130,8 @@ class Coordinator {
                 custom_mcl_flag = false;
             }
             else {
-                feedback_.status = {"Robot moves towards the closest waypoint yet to be visited while scanning the environment."};
+                // feedback_.status = {"Robot moves towards the closest waypoint yet to be visited while scanning the environment."};
+                feedback_.status = {"Robot moves towards the next waypoint while scanning the environment."};
                 as_.publishFeedback(feedback_);
             }
 
@@ -284,6 +291,32 @@ class Coordinator {
         std::pair<float, float> pos = {x, y};
 
         return pos;
+    }
+
+    void waypointsSorting(std::vector<std::pair<float, float>>& waypoints, int TILE_DIM) {
+        std::vector<std::vector<std::pair<float, float>>> tmp;
+        for(auto w : waypoints) {
+            int index = round(w.first / (TILE_DIM/2));
+            while(index >= tmp.size())
+                tmp.push_back(std::vector<std::pair<float, float>>());
+            tmp[index].push_back(w);
+        }
+        waypoints.clear();
+        int counter = 0;
+        for(auto ws : tmp) {
+            if(counter % 2 != 0)
+                std::sort(ws.begin(), ws.end(), [](const std::pair<float, float>& a, const std::pair<float, float>& b) {
+                return a.second < b.second; 
+            });
+            else
+            std::sort(ws.begin(), ws.end(), [](const std::pair<float, float>& a, const std::pair<float, float>& b) {
+                return a.second > b.second; 
+            });
+            if(!ws.empty()) {
+                for(auto w : ws) waypoints.push_back(w);
+                counter++;
+            }
+        }
     }
 
 };
