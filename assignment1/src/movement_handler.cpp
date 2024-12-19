@@ -155,7 +155,7 @@ class MovementHandler
 
     void robospin() {
         
-        for (size_t i = 1; i < 3; i++)
+        for (size_t i = 0; i < 3; i++)
         {
             spin_util((2.0/3.0)*M_PI);
             ros::Duration(0.02).sleep();
