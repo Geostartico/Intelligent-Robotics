@@ -182,21 +182,20 @@ class MovementHandler
     {
         ROS_ERROR("ENTRA IN check");
 
-        if(x_goal>= ROI.x_lower && x_goal<= ROI.x_max && y_goal >= ROI.y_max && y_goal <= ROI.y_lower)
-        {
+        if(x_goal>= ROI.x_lower && x_goal<= ROI.x_max && y_goal >= ROI.y_max && y_goal <= ROI.y_lower) {
             ROS_ERROR("ENTRA IN spawnato down");
             
             result.reached = false;
             move_base_client.cancelGoal();
             as.setAborted(result, "Spawn in roi abort");
             return true;
-        } else if(x_robot >= ROI.x_lower && x_robot <= ROI.x_max && y_robot >= ROI.y_max && y_robot <= ROI.y_lower)
-        {
+        } 
+        else if(x_robot >= ROI.x_lower && x_robot <= ROI.x_max && y_robot >= ROI.y_max && y_robot <= ROI.y_lower) {
             ROS_ERROR("ENTRA IN roi");
             move_base_client.cancelGoal();
-	    ROS_ERROR("EEEPY");
-	    ros::Duration(5.0).sleep();
-	    ROS_ERROR("WAIKY");
+            ROS_ERROR("EEEPY");
+            ros::Duration(5.0).sleep();
+            ROS_ERROR("WAIKY");
             bool finished;
 
             move_base_msgs::MoveBaseGoal  move_emergency_goal_up;
@@ -226,8 +225,8 @@ class MovementHandler
             /*if robot moves inside of the ROI during navigation, it will move to the closest waypoint first.
             *left picked to avoid getting stuck in the wall. take top or bottom first relating to current y position
             */
-            if(y_robot > (ROI.y_lower+ROI.y_max)/2)
-            {   ROS_ERROR("DA SOPRA A SOTTO");
+            if(y_robot > (ROI.y_lower+ROI.y_max)/2) {   
+                ROS_ERROR("DA SOPRA A SOTTO");
                 move_base_client.sendGoal(move_emergency_goal_up);
                 finished = move_base_client.waitForResult(ros::Duration(15.0));
                 if(finished) {ROS_ERROR("WAYPOINT EMERGENCY UP OK");}
@@ -238,34 +237,43 @@ class MovementHandler
                 if(finished) {ROS_ERROR("WAYPOINT EMERGENCY DOWN OK");}
                 else ROS_ERROR("moved");
                 ros::Duration(0.02).sleep();
-            } else
-            {
+            } 
+            else {
                 ROS_ERROR("DA SOTTO A SOPRA");
-		ROS_ERROR("POINT: %f, %f",
-            move_emergency_goal_down.target_pose.pose.position.x,
-            move_emergency_goal_down.target_pose.pose.position.y);
+                ROS_ERROR("POINT: %f, %f",
+                move_emergency_goal_down.target_pose.pose.position.x,
+                move_emergency_goal_down.target_pose.pose.position.y);
                 move_base_client.sendGoal(move_emergency_goal_down);
                 finished = move_base_client.waitForResult(ros::Duration(15.0));
-                if(finished) {ROS_ERROR("WAYPOINT EMERGENCY DOWN OK");}
-                else ROS_ERROR("moved");
-		ROS_ERROR("POINT: %f, %f",
-            move_emergency_goal_up.target_pose.pose.position.x,
-            move_emergency_goal_up.target_pose.pose.position.y);
+                if(finished) {
+                    ROS_ERROR("WAYPOINT EMERGENCY DOWN OK");
+                }
+                else 
+                    ROS_ERROR("moved");
+                ROS_ERROR("POINT: %f, %f",
+                move_emergency_goal_up.target_pose.pose.position.x,
+                move_emergency_goal_up.target_pose.pose.position.y);
                 ros::Duration(0.02).sleep();
                 move_base_client.sendGoal(move_emergency_goal_up);
                 finished = move_base_client.waitForResult(ros::Duration(15.0));
-                if(finished) {ROS_ERROR("WAYPOINT EMERGENCY UP OK");}
-                else ROS_ERROR("moved");
+                if(finished) {
+                    ROS_ERROR("WAYPOINT EMERGENCY UP OK");
+                }
+                else 
+                    ROS_ERROR("moved");
                 ros::Duration(0.02).sleep();
             }
             move_base_client.sendGoal(og_move_goal);
-		ROS_ERROR("POINT: %f, %f",
+		    ROS_ERROR("POINT: %f, %f",
 				og_move_goal.target_pose.pose.position.x,
 				og_move_goal.target_pose.pose.position.y);
-	    finished = move_base_client.waitForResult(ros::Duration(15.0));
-	    if(finished) {ROS_ERROR("WAYPOINT EMERGENCY OG OK");}
-	    else ROS_ERROR("muove");
-	    ROS_ERROR("QUI");
+            finished = move_base_client.waitForResult(ros::Duration(15.0));
+            if(finished) {
+                ROS_ERROR("WAYPOINT EMERGENCY OG OK");
+            }
+            else 
+                ROS_ERROR("muove");
+            ROS_ERROR("QUI");
             ros::Duration(0.02).sleep();
             //as.setAborted(result, "Spawn in roi abort");
         }
