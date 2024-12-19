@@ -210,6 +210,7 @@ class MovementHandler
             move_base_msgs::MoveBaseGoal  move_emergency_goal_down;
             move_emergency_goal_down.target_pose.header.frame_id = "map";
             move_emergency_goal_down.target_pose.pose.position.x = ROI.x_max;
+            move_emergency_goal_down.target_pose.pose.position.y = ROI.y_max;
             move_emergency_goal_down.target_pose.header.stamp = ros::Time::now();
 
             move_emergency_goal_down.target_pose.pose.orientation.w = 1.0;
