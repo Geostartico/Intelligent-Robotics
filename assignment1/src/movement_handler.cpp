@@ -9,6 +9,7 @@
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <sensor_msgs/LaserScan.h>
 #include <geometry_msgs/Twist.h> 
+#include <cmath>
 
 const float MAX_CORRIDOR_X = 5.66; 
 const float ANGULAR_VEL = 0.3;
@@ -28,6 +29,17 @@ struct  robotPos{
     double y_robot;
 };
 
+bool is_closer(move_base_msgs::MoveBaseGoal current, move_base_msgs::MoveBaseGoal next, move_base_msgs::MoveBaseGoal target){
+	float current_x = current.target_pose.pose.position.x;
+	float current_y = current.target_pose.pose.position.y;
+	float next_x = next.target_pose.pose.position.x;
+	float next_y = next.target_pose.pose.position.y;
+	float target_x = target.target_pose.pose.position.x;
+	float target_y = target.target_pose.pose.position.y;
+	float distance_cur = std::pow(std::pow(current_x,2)-std::pow(target_x,2),2)+std::pow(std::pow(current_y,2)-std::pow(target_y,2),2);
+	float distance_next = std::pow(std::pow(next_x,2)-std::pow(target_x,2),2)+std::pow(std::pow(next_y,2)-std::pow(target_y,2),2);
+	return distance_cur>distance_next;
+}
 class MovementHandler
 {
     protected:
@@ -93,7 +105,7 @@ class MovementHandler
             /*coordinates obtained from RViz, following the map reference, 2m size to avoid collision.
             *saving bottom and top left corners as emergency waypoints allow redirection on the outer perimeter of the ROI
             */
-             blackROI  table{6.03863,8.53863,-1.07448,-3.57448};
+             blackROI  table{6.28863,8.28863,-1.07448,-3.57448};
             
 
             ros::Rate rate(10.0);
@@ -193,9 +205,9 @@ class MovementHandler
         else if(x_robot >= ROI.x_lower && x_robot <= ROI.x_max && y_robot >= ROI.y_max && y_robot <= ROI.y_lower) {
             ROS_ERROR("ENTRA IN roi");
             move_base_client.cancelGoal();
-            ROS_ERROR("EEEPY");
-            ros::Duration(5.0).sleep();
-            ROS_ERROR("WAIKY");
+            //ROS_ERROR("EEEPY");
+            //ros::Duration(5.0).sleep();
+            //ROS_ERROR("WAIKY");
             bool finished;
 
             move_base_msgs::MoveBaseGoal  move_emergency_goal_up;
@@ -230,13 +242,15 @@ class MovementHandler
                 move_base_client.sendGoal(move_emergency_goal_up);
                 finished = move_base_client.waitForResult(ros::Duration(15.0));
                 if(finished) {ROS_ERROR("WAYPOINT EMERGENCY UP OK");}
-                else ROS_ERROR("moevd");
-                ros::Duration(0.02).sleep();
-                move_base_client.sendGoal(move_emergency_goal_down);
-                finished = move_base_client.waitForResult(ros::Duration(15.0));
-                if(finished) {ROS_ERROR("WAYPOINT EMERGENCY DOWN OK");}
                 else ROS_ERROR("moved");
                 ros::Duration(0.02).sleep();
+		if(is_closer(move_emergency_goal_up, move_emergency_goal_down, og_move_goal)){
+			move_base_client.sendGoal(move_emergency_goal_down);
+			finished = move_base_client.waitForResult(ros::Duration(15.0));
+			if(finished) {ROS_ERROR("WAYPOINT EMERGENCY DOWN OK");}
+			else ROS_ERROR("moved");
+			ros::Duration(0.02).sleep();
+		}
             } 
             else {
                 ROS_ERROR("DA SOTTO A SOPRA");
@@ -254,16 +268,19 @@ class MovementHandler
                 move_emergency_goal_up.target_pose.pose.position.x,
                 move_emergency_goal_up.target_pose.pose.position.y);
                 ros::Duration(0.02).sleep();
-                move_base_client.sendGoal(move_emergency_goal_up);
-                finished = move_base_client.waitForResult(ros::Duration(15.0));
-                if(finished) {
-                    ROS_ERROR("WAYPOINT EMERGENCY UP OK");
-                }
-                else 
-                    ROS_ERROR("moved");
-                ros::Duration(0.02).sleep();
+		if(is_closer(move_emergency_goal_down, move_emergency_goal_up, og_move_goal)){
+			move_base_client.sendGoal(move_emergency_goal_up);
+			finished = move_base_client.waitForResult(ros::Duration(15.0));
+			if(finished) {
+				ROS_ERROR("WAYPOINT EMERGENCY UP OK");
+			}
+			else 
+				ROS_ERROR("moved");
+			ros::Duration(0.02).sleep();
+		}
             }
             move_base_client.sendGoal(og_move_goal);
+	    ROS_ERROR("ORIGINAL_GOAL");
 		    ROS_ERROR("POINT: %f, %f",
 				og_move_goal.target_pose.pose.position.x,
 				og_move_goal.target_pose.pose.position.y);
