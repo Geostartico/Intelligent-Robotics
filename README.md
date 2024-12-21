@@ -1,6 +1,4 @@
-# README #
-
-### GROUP 02 
+# GROUP 02 
 
 Artico Giovanni, [giovanni.artico@studenti.unipd.it](mailto:giovanni.artico@studenti.unipd.it)
 
@@ -8,29 +6,39 @@ Colla Francesco, [francesco.colla.2@studenti.unipd.it](mailto:francesco.colla.2@
 
 Toffolon Mattia, [mattia.toffolon@studenti.unipd.it](mailto:mattia.toffolon@studenti.unipd.it)
 
+---
+
 # Instructions to run the code
 
-## To toggle the motion control law open the file /assignment1/lanch/launch_independent_services.launch and in line 3 set args to 0
+For this project we provide some launchfiles to ease the execution of the program. 
+Launch them on different terminals in the order later explained to correctly start the system.
 
-For this assignment we provided some launchfiles to ease the execution of the program, to do so send this commands in different terminals. 
-Firtly start the simulation environment
+Firstly start the simulation environment:
 
 ```bash
 	roslaunch tiago_iaslab_simulation start_simulation.launch world_name:=iaslab_assignment1
 ```
-And wait for the  arm tucking procedure, once that is completed start the nodes needed for movements and apriltags with the commands provided in the assignment paper by using a second launch file provided for ease of use
+
+Once the arm tucking procedure is completed, use the following launchfile to start the nodes needed for robot movement and apriltags id generation which were already provided for this assignment:
 
 ```bash
-	roslaunch assignment1 launch_after_gazebo.launch
+	roslaunch assignment1 after_gazebo.launch
 ```
 
-Now the enviorment is ready and we can start launching the nodes created by us, launching in the following order
+Now that the environment is ready, the nodes developed by us can be started. Launch the following files in the given order to start the simulation:
 
 ```bash
-	roslaunch assignment1 launch_independent_services.launch 
-	
-	roslaunch assignment1 launch_last_nodes.launch
+	roslaunch assignment1 independent_services.launch 
+	roslaunch assignment1 last_nodes.launch
 ```
 
-Now the simulation started and the robot will navigate. To toggle
+Note that all prints on screen have been suppressed besides the node_A and node_B ones.
+The former is included in independent_services.launch and the latter in launch_last_nodes.launch .
 
+---
+
+## Custom Motion Control Law
+
+A custom Motion Control Law has been implemented to traverse the narrow corridor. The enabling of this function is dictated by a command-line argument given to the movement_handler and node_B nodes.
+
+The launchfiles were set so that the implemented MCL is used. To change behavior of the system switch the given arguments to 0 in the relative launchfiles.
