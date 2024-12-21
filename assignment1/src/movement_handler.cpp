@@ -105,8 +105,7 @@ class MovementHandler
             /*coordinates obtained from RViz, following the map reference, 2m size to avoid collision.
             *saving bottom and top left corners as emergency waypoints allow redirection on the outer perimeter of the ROI
             */
-             blackROI  table{6.28863,8.28863,-1.07448,-3.57448};
-            
+             blackROI  table{6.28863,8.28863,-1.32448,-3.32448};
 
             ros::Rate rate(10.0);
             while (ros::ok()) {   
@@ -192,10 +191,8 @@ class MovementHandler
 
     bool inBlackROI(double x_goal, double y_goal, double x_robot, double y_robot,blackROI& ROI)
     {
-        ROS_ERROR("ENTRA IN check");
 
         if(x_goal>= ROI.x_lower && x_goal<= ROI.x_max && y_goal >= ROI.y_max && y_goal <= ROI.y_lower) {
-            ROS_ERROR("ENTRA IN spawnato down");
             
             result.reached = false;
             move_base_client.cancelGoal();
@@ -203,11 +200,7 @@ class MovementHandler
             return true;
         } 
         else if(x_robot >= ROI.x_lower && x_robot <= ROI.x_max && y_robot >= ROI.y_max && y_robot <= ROI.y_lower) {
-            ROS_ERROR("ENTRA IN roi");
             move_base_client.cancelGoal();
-            //ROS_ERROR("EEEPY");
-            //ros::Duration(5.0).sleep();
-            //ROS_ERROR("WAIKY");
             bool finished;
 
             move_base_msgs::MoveBaseGoal  move_emergency_goal_up;
@@ -238,61 +231,28 @@ class MovementHandler
             *left picked to avoid getting stuck in the wall. take top or bottom first relating to current y position
             */
             if(y_robot > (ROI.y_lower+ROI.y_max)/2) {   
-                ROS_ERROR("DA SOPRA A SOTTO");
                 move_base_client.sendGoal(move_emergency_goal_up);
                 finished = move_base_client.waitForResult(ros::Duration(15.0));
-                if(finished) {ROS_ERROR("WAYPOINT EMERGENCY UP OK");}
-                else ROS_ERROR("moved");
                 ros::Duration(0.02).sleep();
-		if(is_closer(move_emergency_goal_up, move_emergency_goal_down, og_move_goal)){
+		    if(is_closer(move_emergency_goal_up, move_emergency_goal_down, og_move_goal)){
 			move_base_client.sendGoal(move_emergency_goal_down);
 			finished = move_base_client.waitForResult(ros::Duration(15.0));
-			if(finished) {ROS_ERROR("WAYPOINT EMERGENCY DOWN OK");}
-			else ROS_ERROR("moved");
 			ros::Duration(0.02).sleep();
 		}
             } 
             else {
-                ROS_ERROR("DA SOTTO A SOPRA");
-                ROS_ERROR("POINT: %f, %f",
-                move_emergency_goal_down.target_pose.pose.position.x,
-                move_emergency_goal_down.target_pose.pose.position.y);
                 move_base_client.sendGoal(move_emergency_goal_down);
                 finished = move_base_client.waitForResult(ros::Duration(15.0));
-                if(finished) {
-                    ROS_ERROR("WAYPOINT EMERGENCY DOWN OK");
-                }
-                else 
-                    ROS_ERROR("moved");
-                ROS_ERROR("POINT: %f, %f",
-                move_emergency_goal_up.target_pose.pose.position.x,
-                move_emergency_goal_up.target_pose.pose.position.y);
                 ros::Duration(0.02).sleep();
-		if(is_closer(move_emergency_goal_down, move_emergency_goal_up, og_move_goal)){
+		    if(is_closer(move_emergency_goal_down, move_emergency_goal_up, og_move_goal)){
 			move_base_client.sendGoal(move_emergency_goal_up);
 			finished = move_base_client.waitForResult(ros::Duration(15.0));
-			if(finished) {
-				ROS_ERROR("WAYPOINT EMERGENCY UP OK");
-			}
-			else 
-				ROS_ERROR("moved");
 			ros::Duration(0.02).sleep();
 		}
             }
             move_base_client.sendGoal(og_move_goal);
-	    ROS_ERROR("ORIGINAL_GOAL");
-		    ROS_ERROR("POINT: %f, %f",
-				og_move_goal.target_pose.pose.position.x,
-				og_move_goal.target_pose.pose.position.y);
             finished = move_base_client.waitForResult(ros::Duration(15.0));
-            if(finished) {
-                ROS_ERROR("WAYPOINT EMERGENCY OG OK");
-            }
-            else 
-                ROS_ERROR("muove");
-            ROS_ERROR("QUI");
             ros::Duration(0.02).sleep();
-            //as.setAborted(result, "Spawn in roi abort");
         }
         return false; 
     };
