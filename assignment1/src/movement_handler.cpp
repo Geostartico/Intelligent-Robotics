@@ -105,7 +105,7 @@ class MovementHandler
             /*coordinates obtained from RViz, following the map reference, 2m size to avoid collision.
             *saving bottom and top left corners as emergency waypoints allow redirection on the outer perimeter of the ROI
             */
-             blackROI  table{6.28863,8.28863,-1.32448,-3.32448};
+             blackROI  table{6.28863,8.28863,-1.07448,-3.57448};
 
             ros::Rate rate(10.0);
             while (ros::ok()) {   
