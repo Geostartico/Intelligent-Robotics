@@ -104,31 +104,24 @@ class Coordinator {
         int counter = 0, searches_counter = 0;
         bool breaked_flag = false;
         const int MAX_SEARCHES = 2;
-        while(waypoints.size() > 0) {
-            // The closest waypoint to the current robot position is found
-            auto closest_it = waypoints.begin();
-            // float min_distance = distanceSquared(curr_pos.first, curr_pos.second, closest_it->first, closest_it->second);
 
-            // for (auto it = waypoints.begin() + 1; it != waypoints.end(); ++it) {
-            //     float dist = distanceSquared(curr_pos.first, curr_pos.second, it->first, it->second);
-            //     if (dist < min_distance) {
-            //         min_distance = dist;
-            //         closest_it = it;
-            //     }
-            // }
+        while(waypoints.size() > 0) {
+
+            // The next waypoint is selected
+            auto closest_it = waypoints.begin();
 
             assignment1::WaypointMoveGoal wp_goal;
             wp_goal.x = (*closest_it).first;
             wp_goal.y = (*closest_it).second;
             ROS_INFO("Next Waypoint x:%f y:%f", wp_goal.x, wp_goal.y);
 
+            // If the custom MCL is enabled, give a different feedback
             if(custom_mcl_flag) {
                 feedback_.status = {"Before processing the first waypoint, the robot looks around the initial position and traverses the corridor using the custom Movement Control Law while scanning the environment."};
                 as_.publishFeedback(feedback_);
                 custom_mcl_flag = false;
             }
             else {
-                // feedback_.status = {"Robot moves towards the closest waypoint yet to be visited while scanning the environment."};
                 feedback_.status = {"Robot moves towards the next waypoint while scanning the environment."};
                 as_.publishFeedback(feedback_);
             }
@@ -272,11 +265,6 @@ class Coordinator {
             ROS_INFO("Waypoint NOT reached as planned.");
     }
 
-    // Method to compute the squared euclidean distance between two points
-    float distanceSquared(float x1, float y1, float x2, float y2) {
-        return std::pow(x1 - x2, 2) + std::pow(y1 - y2, 2);
-    }
-
     // Method to obtain current robot position in the map reference frame
     std::pair<float,float>  get_robot_pos() {
         tf::StampedTransform transform;
@@ -292,6 +280,7 @@ class Coordinator {
         return pos;
     }
 
+    // Method to sort the waypoints to obtain and efficient ordering (snake pattern)
     void waypointsSorting(std::vector<std::pair<float, float>>& waypoints, int TILE_DIM) {
         std::vector<std::vector<std::pair<float, float>>> tmp;
         for(auto w : waypoints) {
@@ -317,7 +306,6 @@ class Coordinator {
             }
         }
     }
-
 };
 
 int main(int argc, char** argv)
