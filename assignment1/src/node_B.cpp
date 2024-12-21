@@ -6,8 +6,6 @@
 #include <vector>
 #include <map>
 #include <cstdint>
-#include <thread>        
-#include <chrono>
 #include "assignment1/map_waypoints.h"
 #include "assignment1/apriltag_detect.h"
 #include "assignment1/WaypointMoveAction.h"
@@ -83,6 +81,12 @@ class Coordinator {
             return;
         }
 
+        waypointsSorting(waypoints, TILE_DIM);
+        ROS_INFO("WAYPOINTS TEST");
+        for(auto w : waypoints) {
+            ROS_INFO("x:%f y:%f", w.first, w.second);
+        }
+
         feedback_.status = {"Waypoints loaded, Robot starts the navigation."};
         as_.publishFeedback(feedback_);
 
@@ -99,19 +103,19 @@ class Coordinator {
         std::vector<std::pair<float, float>> waypoints_backup = waypoints;
         int counter = 0, searches_counter = 0;
         bool breaked_flag = false;
-        const int MAX_SEARCHES = 3;
+        const int MAX_SEARCHES = 2;
         while(waypoints.size() > 0) {
             // The closest waypoint to the current robot position is found
             auto closest_it = waypoints.begin();
-            float min_distance = distanceSquared(curr_pos.first, curr_pos.second, closest_it->first, closest_it->second);
+            // float min_distance = distanceSquared(curr_pos.first, curr_pos.second, closest_it->first, closest_it->second);
 
-            for (auto it = waypoints.begin() + 1; it != waypoints.end(); ++it) {
-                float dist = distanceSquared(curr_pos.first, curr_pos.second, it->first, it->second);
-                if (dist < min_distance) {
-                    min_distance = dist;
-                    closest_it = it;
-                }
-            }
+            // for (auto it = waypoints.begin() + 1; it != waypoints.end(); ++it) {
+            //     float dist = distanceSquared(curr_pos.first, curr_pos.second, it->first, it->second);
+            //     if (dist < min_distance) {
+            //         min_distance = dist;
+            //         closest_it = it;
+            //     }
+            // }
 
             assignment1::WaypointMoveGoal wp_goal;
             wp_goal.x = (*closest_it).first;
@@ -124,7 +128,8 @@ class Coordinator {
                 custom_mcl_flag = false;
             }
             else {
-                feedback_.status = {"Robot moves towards the closest waypoint yet to be visited while scanning the environment."};
+                // feedback_.status = {"Robot moves towards the closest waypoint yet to be visited while scanning the environment."};
+                feedback_.status = {"Robot moves towards the next waypoint while scanning the environment."};
                 as_.publishFeedback(feedback_);
             }
 
@@ -145,7 +150,7 @@ class Coordinator {
             }
 
             // The current robot position is updated
-            curr_pos = get_robot_pos();
+            // curr_pos = get_robot_pos();
 
             // The processed waypoint is removed
             waypoints.erase(closest_it);
@@ -205,12 +210,13 @@ class Coordinator {
             if(waypoints.empty())
                 searches_counter++;
 
-            // If all waypoints were processed and NOT every AprilTag has been found, restart the search (max 3 attempts in total)
+            // If all waypoints were processed and NOT every AprilTag has been found, restart the search doing the inverse path (max 3 attempts in total)
             if(searches_counter<MAX_SEARCHES && waypoints.empty() && (ids.size() - ids_counter)) {
-                ROS_INFO("Search Attempt %d/%d: All waypoints processed but NOT all AprilTags found. Restarting the search.", searches_counter , MAX_SEARCHES);
+                ROS_INFO("Search Attempt %d/%d: All waypoints processed but NOT all AprilTags found. Restarting the search following the inverse path.", searches_counter , MAX_SEARCHES);
                 feedback_.status = {"Robot Search Attempt " + std::to_string(searches_counter + 1) + "/" + std::to_string(MAX_SEARCHES) +
-                                    ": All waypoints processed but NOT all AprilTags found. Restarting the search."};
+                                    ": All waypoints processed but NOT all AprilTags found. Restarting the search following the inverse path.."};
                 as_.publishFeedback(feedback_);
+                std::reverse(waypoints_backup.begin(), waypoints_backup.end());
                 waypoints = waypoints_backup;
                 counter = 0;
             }
@@ -284,6 +290,32 @@ class Coordinator {
         std::pair<float, float> pos = {x, y};
 
         return pos;
+    }
+
+    void waypointsSorting(std::vector<std::pair<float, float>>& waypoints, int TILE_DIM) {
+        std::vector<std::vector<std::pair<float, float>>> tmp;
+        for(auto w : waypoints) {
+            int index = round(w.first / (TILE_DIM/2));
+            while(index >= tmp.size())
+                tmp.push_back(std::vector<std::pair<float, float>>());
+            tmp[index].push_back(w);
+        }
+        waypoints.clear();
+        int counter = 0;
+        for(auto ws : tmp) {
+            if(counter % 2 != 0)
+                std::sort(ws.begin(), ws.end(), [](const std::pair<float, float>& a, const std::pair<float, float>& b) {
+                return a.second < b.second; 
+            });
+            else
+            std::sort(ws.begin(), ws.end(), [](const std::pair<float, float>& a, const std::pair<float, float>& b) {
+                return a.second > b.second; 
+            });
+            if(!ws.empty()) {
+                for(auto w : ws) waypoints.push_back(w);
+                counter++;
+            }
+        }
     }
 
 };
