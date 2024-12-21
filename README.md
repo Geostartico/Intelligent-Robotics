@@ -1,4 +1,4 @@
-# GROUP 02 
+## GROUP 02 
 
 Artico Giovanni, [giovanni.artico@studenti.unipd.it](mailto:giovanni.artico@studenti.unipd.it)
 
@@ -8,7 +8,7 @@ Toffolon Mattia, [mattia.toffolon@studenti.unipd.it](mailto:mattia.toffolon@stud
 
 ---
 
-# Instructions to run the code
+## Code Running Instructions
 
 For this project we provide some launchfiles to ease the execution of the program. 
 Launch them on different terminals in the order later explained to correctly start the system.
