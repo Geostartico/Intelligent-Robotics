@@ -30,3 +30,15 @@ Now that the environment is ready, the nodes developed by us can be started. Lau
 ```bash
 	roslaunch assignment1 independent_services.launch 
 	roslaunch assignment1 last_nodes.launch
+```
+
+Note that all prints on screen have been suppressed besides the node_A and node_B ones.
+The former is included in independent_services.launch and the latter in launch_last_nodes.launch .
+
+---
+
+## Custom Motion Control Law
+
+A custom Motion Control Law has been implemented to traverse the narrow corridor. The enabling of this function is dictated by a command-line argument given to the movement_handler and node_B nodes.
+
+The launchfiles were set so that the implemented MCL is used. To change behavior of the system switch the given arguments to 0 in the relative launchfiles.
