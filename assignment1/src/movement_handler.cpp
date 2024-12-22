@@ -234,21 +234,21 @@ class MovementHandler
                 move_base_client.sendGoal(move_emergency_goal_up);
                 finished = move_base_client.waitForResult(ros::Duration(15.0));
                 ros::Duration(0.02).sleep();
-		    if(is_closer(move_emergency_goal_up, move_emergency_goal_down, og_move_goal)){
-			move_base_client.sendGoal(move_emergency_goal_down);
-			finished = move_base_client.waitForResult(ros::Duration(15.0));
-			ros::Duration(0.02).sleep();
-		}
+                if(is_closer(move_emergency_goal_up, move_emergency_goal_down, og_move_goal)){
+                    move_base_client.sendGoal(move_emergency_goal_down);
+                    finished = move_base_client.waitForResult(ros::Duration(15.0));
+                    ros::Duration(0.02).sleep();
+                }
             } 
             else {
                 move_base_client.sendGoal(move_emergency_goal_down);
                 finished = move_base_client.waitForResult(ros::Duration(15.0));
                 ros::Duration(0.02).sleep();
-		    if(is_closer(move_emergency_goal_down, move_emergency_goal_up, og_move_goal)){
-			move_base_client.sendGoal(move_emergency_goal_up);
-			finished = move_base_client.waitForResult(ros::Duration(15.0));
-			ros::Duration(0.02).sleep();
-		}
+                if(is_closer(move_emergency_goal_down, move_emergency_goal_up, og_move_goal)){
+                    move_base_client.sendGoal(move_emergency_goal_up);
+                    finished = move_base_client.waitForResult(ros::Duration(15.0));
+                    ros::Duration(0.02).sleep();
+                }
             }
             move_base_client.sendGoal(og_move_goal);
             finished = move_base_client.waitForResult(ros::Duration(15.0));
