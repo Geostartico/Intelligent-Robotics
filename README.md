@@ -8,6 +8,7 @@ Toffolon Mattia, [mattia.toffolon@studenti.unipd.it](mailto:mattia.toffolon@stud
 
 ---
 
-## Code Running Instructions
+## Repository Instructions
 
-For this project we separated Assignment 1 and 2, in each folder another README.md file contains instructions to execute the code.
+For this project we separated Assignment 1 and 2 in different folders. 
+In each one of them there's a README.md file that contains instructions to execute the respective the code.
