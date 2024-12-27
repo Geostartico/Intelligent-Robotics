@@ -1,6 +1,6 @@
 <launch> 
     <node pkg="assignment1" type="apriltag_locator_service" name="apriltag_locator_service" output="log"/>
-    <node pkg="assignment1" type="movement_handler" name="movement_handler" output="log"/>
+    <node pkg="assignment1" type="movement_handler" name="movement_handler" output="log" args="1"/>
     <node pkg="assignment1" type="map_waypoints_service" name="map_waypoints_service" output="log"/>
     <node pkg="assignment1" type="node_A" name="node_A" output="screen"/>
 </launch>

@@ -1,29 +1,14 @@
-# README #
+## GROUP 02 
 
-This README would normally document whatever steps are necessary to get your application up and running.
+Artico Giovanni, [giovanni.artico@studenti.unipd.it](mailto:giovanni.artico@studenti.unipd.it)
 
-### What is this repository for? ###
+Colla Francesco, [francesco.colla.2@studenti.unipd.it](mailto:francesco.colla.2@studenti.unipd.it)
 
-* Quick summary
-* Version
-* [Learn Markdown](https://bitbucket.org/tutorials/markdowndemo)
+Toffolon Mattia, [mattia.toffolon@studenti.unipd.it](mailto:mattia.toffolon@studenti.unipd.it)
 
-### How do I get set up? ###
+---
 
-* Summary of set up
-* Configuration
-* Dependencies
-* Database configuration
-* How to run tests
-* Deployment instructions
+## Repository Instructions
 
-### Contribution guidelines ###
-
-* Writing tests
-* Code review
-* Other guidelines
-
-### Who do I talk to? ###
-
-* Repo owner or admin
-* Other community or team contact
+For this project we separated Assignment 1 and 2 in different folders. 
+In each one of them there's a README.md file that contains instructions to execute the respective the code.

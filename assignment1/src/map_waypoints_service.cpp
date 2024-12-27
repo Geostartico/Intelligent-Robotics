@@ -102,9 +102,11 @@ void processConnectedComponents(const Mat& binaryImage, int threshold, std::vect
             }
         } else {
             //return the component
-            geometry_msgs::Pose pose = get_global_pose(component.x+width/2, component.y+height/2, map);
-            x.push_back(pose.position.x);
-            y.push_back(pose.position.y);
+            if(height*width>=0.3*threshold*threshold){
+                geometry_msgs::Pose pose = get_global_pose(component.x+width/2, component.y+height/2, map);
+                x.push_back(pose.position.x);
+                y.push_back(pose.position.y);
+            }
         }
     }
 }

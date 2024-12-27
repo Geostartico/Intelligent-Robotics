@@ -6,12 +6,13 @@
 #include <vector>
 #include <map>
 #include <cstdint>
-#include <thread>        
-#include <chrono>
 #include "assignment1/map_waypoints.h"
 #include "assignment1/apriltag_detect.h"
 #include "assignment1/WaypointMoveAction.h"
 #include "assignment1/ApriltagSearchAction.h"
+
+// Maximum x coordinate of corridor space
+const float MAX_CORRIDOR_X = 5.66;
 
 // Typedefs for better readability
 typedef actionlib::SimpleActionClient<assignment1::WaypointMoveAction> WaypointMoveClient;
@@ -27,19 +28,23 @@ class Coordinator {
     std::string action_name_;
     assignment1::ApriltagSearchFeedback feedback_;
     assignment1::ApriltagSearchResult result_;
+    bool custom_mcl_flag;
     
     public:
 
-    Coordinator(std::string name) : as_(nh_, name, boost::bind(&Coordinator::executeCB, this, _1), false), action_name_(name) 
+    Coordinator(std::string name, bool flag) : as_(nh_, name, boost::bind(&Coordinator::executeCB, this, _1), false), action_name_(name) 
     {
+        custom_mcl_flag = flag;
         as_.start();
     }
 
     ~Coordinator(void){}
 
+    // Method that coordinates the search of the IDs given in the action goal
     void executeCB(const assignment1::ApriltagSearchGoalConstPtr &goal)
     {
-        std::vector<int> ids = goal-> ids;
+        // Data structures to store the search status
+        std::vector<int> ids = goal->ids;
         std::map<int, bool> map_atfound;
         std::map<int, std::pair<float, float>> map_atcoord;
         for(int id : ids) {
@@ -53,9 +58,11 @@ class Coordinator {
         // Service client to get the waypoints
         ros::ServiceClient wp_client = nh_.serviceClient<assignment1::map_waypoints>("map_waypoints_service");
         assignment1::map_waypoints srv;
+        // Side length (meters) of a squared area used to divide environment space and obtain waypoints
         const float TILE_DIM = 2;
         srv.request.dim = TILE_DIM;
 
+        // Waypoints are stored locally and filtered if the custom MCL manages the navigation through the corridor
         std::vector<float> x, y;
         std::vector<std::pair<float, float>> waypoints;
         if(wp_client.call(srv)) {
@@ -63,6 +70,8 @@ class Coordinator {
             x = srv.response.x;
             y = srv.response.y;
             for (int i=0; i<x.size(); i++) {
+                if(custom_mcl_flag && x[i] <= MAX_CORRIDOR_X)
+                    continue;
                 waypoints.emplace_back(x[i], y[i]);
             }        
             ROS_INFO("Received %lu waypoints.", x.size());
@@ -72,42 +81,52 @@ class Coordinator {
             return;
         }
 
+        waypointsSorting(waypoints, TILE_DIM);
+        ROS_INFO("WAYPOINTS TEST");
+        for(auto w : waypoints) {
+            ROS_INFO("x:%f y:%f", w.first, w.second);
+        }
+
         feedback_.status = {"Waypoints loaded, Robot starts the navigation."};
         as_.publishFeedback(feedback_);
 
-        // CHANGE WITH THE REAL CURRENT POS
+        // The current robot position is obtained
         std::pair<float,float> curr_pos = get_robot_pos();
         ROS_INFO("Initial position, x:%f y:%f", curr_pos.first, curr_pos.second);
 
-        // Action client to send the waypoint goal
+        // Action client to send waypoints to the Movement Handler server
         WaypointMoveClient ac("move_to_goal", true);
         ROS_INFO("Waiting for Movemente_Handler server to start...");
         ac.waitForServer();
         ROS_INFO("Movemente_Handler server started. Now looking for the closest waypoint.");
 
-        int tot_waypoints = waypoints.size();
-        int counter = 0;
-        while(waypoints.size() > 0) {
-            auto closest_it = waypoints.begin();
-            float min_distance = distanceSquared(curr_pos.first, curr_pos.second, closest_it->first, closest_it->second);
+        std::vector<std::pair<float, float>> waypoints_backup = waypoints;
+        int counter = 0, searches_counter = 0;
+        bool breaked_flag = false;
+        const int MAX_SEARCHES = 2;
 
-            for (auto it = waypoints.begin() + 1; it != waypoints.end(); ++it) {
-                float dist = distanceSquared(curr_pos.first, curr_pos.second, it->first, it->second);
-                if (dist < min_distance) {
-                    min_distance = dist;
-                    closest_it = it;
-                }
-            }
+        while(waypoints.size() > 0) {
+
+            // The next waypoint is selected
+            auto closest_it = waypoints.begin();
 
             assignment1::WaypointMoveGoal wp_goal;
             wp_goal.x = (*closest_it).first;
             wp_goal.y = (*closest_it).second;
             ROS_INFO("Next Waypoint x:%f y:%f", wp_goal.x, wp_goal.y);
 
-            feedback_.status = {"Robot resumes navigation and scanning..."};
-            as_.publishFeedback(feedback_);
+            // If the custom MCL is enabled, give a different feedback
+            if(custom_mcl_flag) {
+                feedback_.status = {"Before processing the first waypoint, the robot looks around the initial position and traverses the corridor using the custom Movement Control Law while scanning the environment."};
+                as_.publishFeedback(feedback_);
+                custom_mcl_flag = false;
+            }
+            else {
+                feedback_.status = {"Robot moves towards the next waypoint while scanning the environment."};
+                as_.publishFeedback(feedback_);
+            }
 
-            // Send the goal with result and feedback callbacks, and no active callback
+            // The selected waypoint is sent as goal to the Movement Handler action server
             ac.sendGoal(
                 wp_goal,
                 boost::bind(&Coordinator::resultCallback, this, _1, _2),  
@@ -115,7 +134,7 @@ class Coordinator {
                 boost::bind(&Coordinator::feedbackCallback, this, _1)
             );
 
-            bool finished_before_timeout = ac.waitForResult(ros::Duration(500.0));
+            bool finished_before_timeout = ac.waitForResult(ros::Duration(50.0));
             if (finished_before_timeout) {
                 actionlib::SimpleClientGoalState state = ac.getState();
                 ROS_INFO("Waypoint processing result: %s", state.toString().c_str());
@@ -123,22 +142,26 @@ class Coordinator {
                 ROS_INFO("Waypoint not processed before the timeout.");
             }
 
-            // Update curr_pos
-            curr_pos = get_robot_pos();
+            // The current robot position is updated
+            // curr_pos = get_robot_pos();
 
-            // Remove the previous waypoint from the vector
+            // The processed waypoint is removed
             waypoints.erase(closest_it);
             
             ++counter;
-            feedback_.status = {"Robot has processed a waypoint (" + std::to_string(counter) + "/" + std::to_string(tot_waypoints) + ")."};
+            feedback_.status = {"Robot has processed a waypoint (" + std::to_string(counter) + "/" + std::to_string(waypoints_backup.size()) + ")."};
             as_.publishFeedback(feedback_);
 
+            feedback_.status = {"Robot looks around itself by doing a 360 degrees turn."};
+            as_.publishFeedback(feedback_);
+
+            // Client to receive the current status of the AprilTags Detection 
             ros::ServiceClient ad_client = nh_.serviceClient<assignment1::apriltag_detect>("apriltags_detected_service");
             assignment1::apriltag_detect ad_srv;
 
+            // Update the local data structures with the informations returned via service
             if(ad_client.call(ad_srv)) {
                 ROS_INFO("Call to apriltags_detected_service: SUCCESSFUL.");
-                // TAGS FILTERING AND MANAGEMENT
                 std::vector<int> ids = ad_srv.response.ids;
                 for(int i=0; i<ids.size(); i++) {
                     auto it = map_atfound.find(ids[i]);
@@ -153,7 +176,7 @@ class Coordinator {
                 return;
             }
 
-            // FEEDBACK ON ACTION FOR HOW MANY TAGS HAVE BEEN FOUND (with ids)
+            // Action feedback for how many and which tags have been found 
             int ids_counter = 0;
             std::string ids_list1 =  "";
             std::string ids_list2 =  "";
@@ -169,14 +192,43 @@ class Coordinator {
                                 "Apriltags found:  " + ids_list1,
                                 "Apriltags missing:" + ids_list2};
             as_.publishFeedback(feedback_);
+
+            // Stop the search if all tags have been found
+            if(!(ids.size() - ids_counter)) {
+                breaked_flag = true;
+                break;
+            }
+
+            // Increase the search attemps counter is all waypoints were processed
+            if(waypoints.empty())
+                searches_counter++;
+
+            // If all waypoints were processed and NOT every AprilTag has been found, restart the search doing the inverse path (max 3 attempts in total)
+            if(searches_counter<MAX_SEARCHES && waypoints.empty() && (ids.size() - ids_counter)) {
+                ROS_INFO("Search Attempt %d/%d: All waypoints processed but NOT all AprilTags found. Restarting the search following the inverse path.", searches_counter , MAX_SEARCHES);
+                feedback_.status = {"Robot Search Attempt " + std::to_string(searches_counter + 1) + "/" + std::to_string(MAX_SEARCHES) +
+                                    ": All waypoints processed but NOT all AprilTags found. Restarting the search following the inverse path.."};
+                as_.publishFeedback(feedback_);
+                std::reverse(waypoints_backup.begin(), waypoints_backup.end());
+                waypoints = waypoints_backup;
+                counter = 0;
+            }
         }
 
-        ROS_INFO("All Waypoints processed, coordinator node shuts down.");
-        feedback_.status = {"Robot processed every waypoint. Navigation and Scanning operations completed."};
-        as_.publishFeedback(feedback_);
-        std::this_thread::sleep_for (std::chrono::milliseconds(500));
+        // Conclusive action feedback
+        if(breaked_flag) {
+            ROS_INFO("All AprilTags detected, coordinator node shuts down.");
+            feedback_.status = {"Robot found all wanted AprilTags. Navigation and Scanning operations completed."};
+            as_.publishFeedback(feedback_);
+        }
+        else {
+            ROS_INFO("All Waypoints processed, coordinator node shuts down.");
+            feedback_.status = {"Robot processed every waypoint. Navigation and Scanning operations completed."};
+            as_.publishFeedback(feedback_);
+        }
+        ros::Duration(0.5).sleep();
 
-        // RESULT ON ACTION
+        // Action result load with obtained data and sending
         std::vector<float> res_x;
         std::vector<float> res_y;
         std::vector<uint8_t>  res_f;
@@ -213,10 +265,7 @@ class Coordinator {
             ROS_INFO("Waypoint NOT reached as planned.");
     }
 
-    float distanceSquared(float x1, float y1, float x2, float y2) {
-        return std::pow(x1 - x2, 2) + std::pow(y1 - y2, 2);
-    }
-
+    // Method to obtain current robot position in the map reference frame
     std::pair<float,float>  get_robot_pos() {
         tf::StampedTransform transform;
         tf::TransformListener listener;
@@ -231,12 +280,49 @@ class Coordinator {
         return pos;
     }
 
+    // Method to sort the waypoints to obtain and efficient ordering (snake pattern)
+    void waypointsSorting(std::vector<std::pair<float, float>>& waypoints, int TILE_DIM) {
+        std::vector<std::vector<std::pair<float, float>>> tmp;
+        for(auto w : waypoints) {
+            int index = round(w.first / (TILE_DIM/2));
+            while(index >= tmp.size())
+                tmp.push_back(std::vector<std::pair<float, float>>());
+            tmp[index].push_back(w);
+        }
+        waypoints.clear();
+        int counter = 0;
+        for(auto ws : tmp) {
+            if(counter % 2 != 0)
+                std::sort(ws.begin(), ws.end(), [](const std::pair<float, float>& a, const std::pair<float, float>& b) {
+                return a.second < b.second; 
+            });
+            else
+            std::sort(ws.begin(), ws.end(), [](const std::pair<float, float>& a, const std::pair<float, float>& b) {
+                return a.second > b.second; 
+            });
+            if(!ws.empty()) {
+                for(auto w : ws) waypoints.push_back(w);
+                counter++;
+            }
+        }
+    }
 };
 
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "node_B");
-    Coordinator Coordinator("Apriltag_Search");
+    
+    if (argc < 2) {
+        ROS_ERROR("Error: At least one parameter is required.");
+        ROS_INFO("Usage: %s <mcl_flag> ", argv[0]);
+        return 1; 
+    }
+
+    // Flag to enable the custom Motion Control Law
+    std::string arg1(argv[1]);
+    bool mcl_flag = (arg1 == "1" || arg1 == "true");
+
+    Coordinator Coordinator("Apriltag_Search", mcl_flag);
     ros::spin();
     return 0;
 }
