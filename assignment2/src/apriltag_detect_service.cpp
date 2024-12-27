@@ -34,6 +34,12 @@ float CUBE_SIDE = 0.05;
 float TRIANGLE_BASE = 0.05;
 float TRIANGLE_HEIGHT = 0.035;
 float TRIANGLE_LENGTH = 0.07;
+float TABLE_SIDE = 0.9;
+float TABLE_1_X = 7.82;
+float TABLE_1_Y = -1.96;
+float TABLE_2_X = 7.82;
+float TABLE_2_Y = -3.01;
+
 /*
  * the following code is separated from the detector as if
  * they were in the same node the service wouldn't respond
@@ -45,6 +51,48 @@ std::vector<float> x;
 std::vector<float> y;
 std::vector<float> z;
 std::vector<float> yaw;
+
+void add_tables(){
+    std::vector<moveit_msgs::CollisionObject> collision_objects;
+    moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
+    moveit_msgs::CollisionObject collision_object1;
+    collision_object1.operation = collision_object1.ADD;
+    collision_object1.id = "table_2";
+    collision_object1.header.frame_id = "/map"; // Replace with the appropriate frame ID
+    shape_msgs::SolidPrimitive primitive1;
+    primitive1.type = primitive1.BOX;
+    primitive1.dimensions.resize(3);
+    primitive1.dimensions[primitive1.BOX_X]= TABLE_SIDE; // Dimensions: X, Y, Z
+    primitive1.dimensions[primitive1.BOX_Y]= TABLE_SIDE; // Dimensions: X, Y, Z
+    primitive1.dimensions[primitive1.BOX_Z]= TABLE_SIDE; // Dimensions: X, Y, Z
+    geometry_msgs::Pose box_pose1;
+    box_pose1.position.x = TABLE_1_X;
+    box_pose1.position.y = TABLE_1_Y;
+    box_pose1.position.z = TABLE_SIDE/2;
+    box_pose1.orientation.w = 1.0;
+    collision_object1.primitives.push_back(primitive1);
+    collision_object1.primitive_poses.push_back(box_pose1);
+
+    moveit_msgs::CollisionObject collision_object2;
+    collision_object2.operation = collision_object2.ADD;
+    collision_object2.id = "table_2";
+    collision_object2.header.frame_id = "/map"; // Replace with the appropriate frame ID
+    shape_msgs::SolidPrimitive primitive2;
+    primitive2.type = primitive2.BOX;
+    primitive2.dimensions.resize(3);
+    primitive2.dimensions[primitive2.BOX_X]= TABLE_SIDE; // Dimensions: X, Y, Z
+    primitive2.dimensions[primitive2.BOX_Y]= TABLE_SIDE; // Dimensions: X, Y, Z
+    primitive2.dimensions[primitive2.BOX_Z]= TABLE_SIDE; // Dimensions: X, Y, Z
+    geometry_msgs::Pose box_pose2;
+    box_pose2.position.x = TABLE_2_X;
+    box_pose2.position.y = TABLE_2_Y;
+    box_pose2.position.z = TABLE_SIDE/2;
+    box_pose2.orientation.w = 1.0;
+    collision_object2.primitives.push_back(primitive2);
+    collision_object2.primitive_poses.push_back(box_pose2);
+    collision_objects.push_back(collision_object2);
+    planning_scene_interface.applyCollisionObjects(collision_objects);
+}
 
 void add_collision_objects(){
     moveit::planning_interface::MoveGroupInterface move_group("arm_torso");
@@ -69,11 +117,10 @@ void add_collision_objects(){
         moveit_msgs::CollisionObject collision_object;
         collision_object.operation = collision_object.ADD;
         collision_object.id = "box_april_"+std::to_string(id_);
-        collision_object.header.frame_id = "/map"; // Replace with the appropriate frame ID
-        // Define the shape of the collision object (a box)
+        collision_object.header.frame_id = "/map";
         shape_msgs::SolidPrimitive primitive;
         primitive.type = primitive.BOX;
-        primitive.dimensions.resize(3); // Dimensions: X, Y, Z
+        primitive.dimensions.resize(3);
 
         if(prism.find(id_) != prism.end()){
             z_ -= PRISM_HEIGHT/2;
