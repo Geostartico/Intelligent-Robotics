@@ -1,0 +1,13 @@
+# GOAL 
+float32 x
+float32 y
+
+---
+
+# RESULT 
+bool reached
+
+---
+
+# FEEDBACK
+string status
