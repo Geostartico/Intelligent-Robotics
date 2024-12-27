@@ -89,7 +89,7 @@ void detectionCallback(const apriltag_ros::AprilTagDetectionArrayConstPtr& msg){
         else{
             apriltags_detected.at(msg->detections.at(i).id[0]).x += pos_out.pose.position.x;
             apriltags_detected.at(msg->detections.at(i).id[0]).y += pos_out.pose.position.y;
-            apriltags_detected.at(msg->detections.at(i).id[0]).z += pos_out.pose.position.x;
+            apriltags_detected.at(msg->detections.at(i).id[0]).z += pos_out.pose.position.z;
             apriltags_detected.at(msg->detections.at(i).id[0]).yaw += pos_out.pose.orientation.w;
             apriltags_detected.at(msg->detections.at(i).id[0]).counter++;
         }
@@ -118,7 +118,7 @@ void lookDown() {
     target_point.header.stamp = ros::Time::now();
     target_point.point.x = 1.0; 
     target_point.point.y = 0.0; 
-    target_point.point.z = -0.5;
+    target_point.point.z = 0.0;
 
     goal.target = target_point;
 
