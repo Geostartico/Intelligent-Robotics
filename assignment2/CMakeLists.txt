@@ -81,3 +81,7 @@ target_link_libraries(node_A ${catkin_LIBRARIES})
 add_executable(node_B src/node_B.cpp)
 add_dependencies(node_B assignment2_generate_messages_cpp)
 target_link_libraries(node_B ${catkin_LIBRARIES})
+
+add_executable(node_C src/node_C.cpp)
+add_dependencies(node_C assignment2_generate_messages_cpp)
+target_link_libraries(node_C ${catkin_LIBRARIES})

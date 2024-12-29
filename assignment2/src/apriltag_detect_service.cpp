@@ -72,6 +72,7 @@ void add_tables(){
     box_pose1.orientation.w = 1.0;
     collision_object1.primitives.push_back(primitive1);
     collision_object1.primitive_poses.push_back(box_pose1);
+    collision_objects.push_back(collision_object1);
 
     moveit_msgs::CollisionObject collision_object2;
     collision_object2.operation = collision_object2.ADD;
@@ -95,6 +96,7 @@ void add_tables(){
 }
 
 void add_collision_objects(){
+    add_tables();
     moveit::planning_interface::MoveGroupInterface move_group("arm_torso");
     ROS_INFO("%s",move_group.getPlanningFrame().c_str());
     // Create a PlanningSceneInterface object
