@@ -7,6 +7,8 @@
 #include "assignment2/object_detect.h"
 #include <sensor_msgs/LaserScan.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
+#include <tf/transform_datatypes.h>
+#include <geometry_msgs/Quaternion.h>
 
 
 // CONSTANTS
@@ -14,64 +16,57 @@ float TABLE_1_X = 7.82;
 float TABLE_1_Y = -1.96;
 float TABLE_2_X = 7.82;
 float TABLE_2_Y = -3.01;
-float DIST      = 2.0;
-
-const float MAX_CORRIDOR_X = 5.66; 
-const float ANGULAR_VEL = 0.3;
-const float LINEAR_VEL = 0.6;
-const float ANGLE_CONSIDERED = M_PI_4;
+float DIST      = 1.0;
 
 typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
 
-void traverse_corridor() {
-    ros::NodeHandle nh;
-    ros::Publisher velPub = nh.advertise<geometry_msgs::Twist>("/mobile_base_controller/cmd_vel", 1);
-    // Wait for the first message on the amcl_pose topic
-    boost::shared_ptr<geometry_msgs::PoseWithCovarianceStamped const> msg;
-    while(ros::ok()){
-        msg = ros::topic::waitForMessage<geometry_msgs::PoseWithCovarianceStamped>("amcl_pose", nh);
-        double x_pos = msg->pose.pose.position.x;
-        if(x_pos > MAX_CORRIDOR_X) {
-            return;
-        }
-        // Extract quaternion
-        double x = msg->pose.pose.orientation.x;
-        double y = msg->pose.pose.orientation.y;
-        double z = msg->pose.pose.orientation.z;
-        double w = msg->pose.pose.orientation.w;
-        geometry_msgs::Twist vel; 
-        vel.linear.x = LINEAR_VEL;
-        sensor_msgs::LaserScanConstPtr laserScanMsg = ros::topic::waitForMessage<sensor_msgs::LaserScan>("scan", nh);
-        float left_mean = 1000;
-        float right_mean = 10000;
-        float angle_min = laserScanMsg->angle_min;
-        float angle_max = laserScanMsg->angle_max;
-        float angle_increment = laserScanMsg->angle_increment;
-        int counter_right = 0;
-        for(int i = (abs(angle_min) - M_PI_2)/angle_increment; 
-                i * angle_increment - (abs(angle_min) - M_PI_2) < ANGLE_CONSIDERED;
-                i++) {
-            float cur = laserScanMsg->ranges[i]* abs(cos(abs(angle_min+i*angle_increment)));
-            if(cur<right_mean){
-                right_mean=cur;
-            }
-            counter_right++;
-        }
-        int counter_left = 0;
-        for(int i = (abs(angle_min) + M_PI_2)/angle_increment; 
-                abs(i * angle_increment - abs(angle_min) - M_PI_2)  < ANGLE_CONSIDERED;
-                i--) {
-            float cur = laserScanMsg->ranges[i]* abs(cos(abs(angle_min+i*angle_increment)));
-            if(cur<left_mean){
-                left_mean=cur;
-            }
-            counter_left++;
-        }
-        if(right_mean > left_mean)
-            vel.angular.z = -ANGULAR_VEL;
-        else
-            vel.angular.z = ANGULAR_VEL;
-        velPub.publish(vel);
+const geometry_msgs::Quaternion POS_X_ORIENTATION = [] {
+    geometry_msgs::Quaternion q;
+    q.x = 0.0; q.y = 0.0; q.z = 0.0; q.w = 1.0;  // 0° (Positive X)
+    return q;
+}();
+
+const geometry_msgs::Quaternion POS_Y_ORIENTATION = [] {
+    geometry_msgs::Quaternion q;
+    q.x = 0.0; q.y = 0.0; q.z = 0.707; q.w = 0.707;  // 90° (Positive Y)
+    return q;
+}();
+
+const geometry_msgs::Quaternion NEG_X_ORIENTATION = [] {
+    geometry_msgs::Quaternion q;
+    q.x = 0.0; q.y = 0.0; q.z = 1.0; q.w = 0.0;  // 180° (Negative X)
+    return q;
+}();
+
+const geometry_msgs::Quaternion NEG_Y_ORIENTATION = [] {
+    geometry_msgs::Quaternion q;
+    q.x = 0.0; q.y = 0.0; q.z = -0.707; q.w = 0.707;  // -90° (Negative Y)
+    return q;
+}();
+
+void sendGoalToMoveBase(double x, double y, const geometry_msgs::Quaternion& orientation) {
+
+    MoveBaseClient ac("move_base", true);
+    ac.waitForServer();
+
+    move_base_msgs::MoveBaseGoal goal;
+    goal.target_pose.header.frame_id = "map";
+    goal.target_pose.header.stamp = ros::Time::now();
+    goal.target_pose.pose.position.x = x;
+    goal.target_pose.pose.position.y = y;
+    goal.target_pose.pose.position.z = 0.0;  // Flat ground
+    goal.target_pose.pose.orientation = orientation;
+
+    ROS_INFO("Sending goal to MoveBase: x=%.2f, y=%.2f, orientation=[%.2f, %.2f, %.2f, %.2f]",
+             x, y, orientation.x, orientation.y, orientation.z, orientation.w);
+    // Assuming you have already created and initialized a MoveBaseClient instance called `ac`
+    ac.sendGoal(goal);
+    ac.waitForResult();
+
+    if (ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED) {
+        ROS_INFO("Goal reached successfully!");
+    } else {
+        ROS_WARN("Failed to reach the goal.");
     }
 }
 
@@ -83,13 +78,6 @@ bool detection_routine(assignment2::object_detect::Request &req, assignment2::ob
     }
 
     ROS_INFO("Service called. Detection routine starts.");
-
-    MoveBaseClient ac("move_base", true);
-
-    // Wait for the action server to be available
-    ROS_INFO("Waiting for the move_base action server to start...");
-    ac.waitForServer();
-    ROS_INFO("move_base action server is ready.");
 
     std::vector<std::pair<float, float>> docks_offsets = {
         std::make_pair(-DIST, 0), 
@@ -114,55 +102,31 @@ bool detection_routine(assignment2::object_detect::Request &req, assignment2::ob
     for(auto p : corns)
         ROS_INFO("x=%f y=%f", p.first, p.second);
 
-    std::vector<std::vector<float>> docks_or = {
-        {0.0, 0.0, 0.0, 1.0},
-        {0.0, 0.0, 0.707, 0.707},
-        {0.0, 0.0, 1.0, 0.0}
-    };
-
-    // Traverse the corridor before starting movement
-    traverse_corridor();
-
     std::vector<float> objs_x, objs_y, docks_x, docks_y;
     std::vector<int> ids;
 
-    for(int i=0; i<docks.size(); i++)
-    {
-        move_base_msgs::MoveBaseGoal goal;
-        goal.target_pose.header.frame_id = "map"; 
-        goal.target_pose.header.stamp = ros::Time::now();
-        goal.target_pose.pose.position.x = docks[i].first;
-        goal.target_pose.pose.position.y = docks[i].second;
-        goal.target_pose.pose.position.z = 0.0; 
-        goal.target_pose.pose.orientation.x = docks_or[i][0];
-        goal.target_pose.pose.orientation.y = docks_or[i][1];
-        goal.target_pose.pose.orientation.z = docks_or[i][2];
-        goal.target_pose.pose.orientation.w = docks_or[i][3];
+    // Intermediate point
+    sendGoalToMoveBase(docks[0].first, 0.0, NEG_Y_ORIENTATION);
 
-        ROS_INFO("[%u/%lu] Sending goal (docking station).", i+1, docks.size());
-        ac.sendGoal(goal);
-        ac.waitForResult();
-        ros::Duration(1.0).sleep();  // delay
+    // First table side
+    sendGoalToMoveBase(docks[0].first, docks[0].second, POS_X_ORIENTATION);
+    // DETECTION HERE
+    sendGoalToMoveBase(docks[0].first, docks[0].second, NEG_Y_ORIENTATION);
 
-        // Corner visit
-        if(i < corns.size()) {
-            move_base_msgs::MoveBaseGoal goal_corner;
-            goal_corner.target_pose.header.frame_id = "map"; 
-            goal_corner.target_pose.header.stamp = ros::Time::now();
-            goal_corner.target_pose.pose.position.x = corns[i].first;
-            goal_corner.target_pose.pose.position.y = corns[i].second;
-            goal_corner.target_pose.pose.position.z = 0.0; 
-            goal_corner.target_pose.pose.orientation.x = 1.0;
-            goal_corner.target_pose.pose.orientation.y = 0.0;
-            goal_corner.target_pose.pose.orientation.z = 0.0;
-            goal_corner.target_pose.pose.orientation.w = 0.0;
+    // First corner
+    sendGoalToMoveBase(corns[0].first, corns[0].second, POS_X_ORIENTATION);   
 
-            ROS_INFO("[%u/%lu] Sending goal (corner).", i+1, corns.size());
-            ac.sendGoal(goal_corner); 
-            ac.waitForResult();
-            ros::Duration(1.0).sleep();
-        }
-    }
+    // Second table side
+    sendGoalToMoveBase(docks[1].first, docks[1].second, POS_Y_ORIENTATION);
+    // DETECTION HERE
+    sendGoalToMoveBase(docks[1].first, docks[1].second, POS_X_ORIENTATION); 
+
+    // Second corner
+    sendGoalToMoveBase(corns[1].first, corns[1].second, POS_Y_ORIENTATION);   
+
+    // Third table side
+    sendGoalToMoveBase(docks[2].first, docks[2].second, NEG_X_ORIENTATION);
+    // DETECTION HERE
 
     res.objs_x = objs_x;
     res.objs_y = objs_y;
