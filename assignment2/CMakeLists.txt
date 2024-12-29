@@ -19,6 +19,7 @@ add_service_files(
     map_service.srv
     map_waypoints.srv
     apriltag_detect.srv
+    object_detect.srv
 )
 
 add_action_files(
@@ -72,7 +73,6 @@ target_link_libraries(movement_handler ${catkin_LIBRARIES})
 add_executable(test_moveit_collision src/test_moveit_collision.cpp)
 add_dependencies(test_moveit_collision assignment2_generate_messages_cpp)
 target_link_libraries(test_moveit_collision ${catkin_LIBRARIES})
-
 
 add_executable(node_A src/node_A.cpp)
 add_dependencies(node_A assignment2_generate_messages_cpp)

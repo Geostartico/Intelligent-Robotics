@@ -1,242 +1,185 @@
 #include <ros/ros.h>
+#include <move_base_msgs/MoveBaseAction.h>
 #include <actionlib/client/simple_action_client.h>
-#include <actionlib/server/simple_action_server.h>
-#include <actionlib/client/terminal_state.h>
 #include <tf/transform_listener.h>
 #include <vector>
 #include <map>
-#include <cstdint>
-#include <thread>        
-#include <chrono>
-#include "assignment2/map_waypoints.h"
-#include "assignment2/apriltag_detect.h"
-#include "assignment2/WaypointMoveAction.h"
-#include "assignment2/ApriltagSearchAction.h"
+#include "assignment2/object_detect.h"
+#include <sensor_msgs/LaserScan.h>
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
 
-// Typedefs for better readability
-typedef actionlib::SimpleActionClient<assignment2::WaypointMoveAction> WaypointMoveClient;
-typedef assignment2::WaypointMoveFeedbackConstPtr FeedbackPtr;
-typedef assignment2::WaypointMoveResultConstPtr ResultPtr;
 
-class Coordinator {
+// CONSTANTS
+float TABLE_1_X = 7.82;
+float TABLE_1_Y = -1.96;
+float TABLE_2_X = 7.82;
+float TABLE_2_Y = -3.01;
+float DIST      = 2.0;
 
-    protected:
+const float MAX_CORRIDOR_X = 5.66; 
+const float ANGULAR_VEL = 0.3;
+const float LINEAR_VEL = 0.6;
+const float ANGLE_CONSIDERED = M_PI_4;
 
-    ros::NodeHandle nh_;
-    actionlib::SimpleActionServer<assignment2::ApriltagSearchAction> as_;
-    std::string action_name_;
-    assignment2::ApriltagSearchFeedback feedback_;
-    assignment2::ApriltagSearchResult result_;
-    
-    public:
+typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
 
-    Coordinator(std::string name) : as_(nh_, name, boost::bind(&Coordinator::executeCB, this, _1), false), action_name_(name) 
-    {
-        as_.start();
-    }
-
-    ~Coordinator(void){}
-
-    void executeCB(const assignment2::ApriltagSearchGoalConstPtr &goal)
-    {
-        std::vector<int> ids = goal-> ids;
-        std::map<int, bool> map_atfound;
-        std::map<int, std::pair<float, float>> map_atcoord;
-        for(int id : ids) {
-            map_atfound[id] = false;                 
-            map_atcoord[id] = std::make_pair(0.0f, 0.0f); 
-        }
-
-        feedback_.status = {"Robot is requesting waypoints for the navigation."};
-        as_.publishFeedback(feedback_);
-
-        // Service client to get the waypoints
-        ros::ServiceClient wp_client = nh_.serviceClient<assignment2::map_waypoints>("map_waypoints_service");
-        assignment2::map_waypoints srv;
-        const float TILE_DIM = 2;
-        srv.request.dim = TILE_DIM;
-
-        std::vector<float> x, y;
-        std::vector<std::pair<float, float>> waypoints;
-        if(wp_client.call(srv)) {
-            ROS_INFO("Call to map_waypoints_service: SUCCESSFUL.");
-            x = srv.response.x;
-            y = srv.response.y;
-            for (int i=0; i<x.size(); i++) {
-                waypoints.emplace_back(x[i], y[i]);
-            }        
-            ROS_INFO("Received %lu waypoints.", x.size());
-        }
-        else {
-            ROS_ERROR("Call to service map_waypoints_service: FAILED.");
+void traverse_corridor() {
+    ros::NodeHandle nh;
+    ros::Publisher velPub = nh.advertise<geometry_msgs::Twist>("/mobile_base_controller/cmd_vel", 1);
+    // Wait for the first message on the amcl_pose topic
+    boost::shared_ptr<geometry_msgs::PoseWithCovarianceStamped const> msg;
+    while(ros::ok()){
+        msg = ros::topic::waitForMessage<geometry_msgs::PoseWithCovarianceStamped>("amcl_pose", nh);
+        double x_pos = msg->pose.pose.position.x;
+        if(x_pos > MAX_CORRIDOR_X) {
             return;
         }
-
-        feedback_.status = {"Waypoints loaded, Robot starts the navigation."};
-        as_.publishFeedback(feedback_);
-
-        // CHANGE WITH THE REAL CURRENT POS
-        std::pair<float,float> curr_pos = get_robot_pos();
-        ROS_INFO("Initial position, x:%f y:%f", curr_pos.first, curr_pos.second);
-
-        // Action client to send the waypoint goal
-        WaypointMoveClient ac("move_to_goal", true);
-        ROS_INFO("Waiting for Movemente_Handler server to start...");
-        ac.waitForServer();
-        ROS_INFO("Movemente_Handler server started. Now looking for the closest waypoint.");
-
-        int tot_waypoints = waypoints.size();
-        int counter = 0;
-        while(waypoints.size() > 0) {
-            auto closest_it = waypoints.begin();
-            float min_distance = distanceSquared(curr_pos.first, curr_pos.second, closest_it->first, closest_it->second);
-
-            for (auto it = waypoints.begin() + 1; it != waypoints.end(); ++it) {
-                float dist = distanceSquared(curr_pos.first, curr_pos.second, it->first, it->second);
-                if (dist < min_distance) {
-                    min_distance = dist;
-                    closest_it = it;
-                }
+        // Extract quaternion
+        double x = msg->pose.pose.orientation.x;
+        double y = msg->pose.pose.orientation.y;
+        double z = msg->pose.pose.orientation.z;
+        double w = msg->pose.pose.orientation.w;
+        geometry_msgs::Twist vel; 
+        vel.linear.x = LINEAR_VEL;
+        sensor_msgs::LaserScanConstPtr laserScanMsg = ros::topic::waitForMessage<sensor_msgs::LaserScan>("scan", nh);
+        float left_mean = 1000;
+        float right_mean = 10000;
+        float angle_min = laserScanMsg->angle_min;
+        float angle_max = laserScanMsg->angle_max;
+        float angle_increment = laserScanMsg->angle_increment;
+        int counter_right = 0;
+        for(int i = (abs(angle_min) - M_PI_2)/angle_increment; 
+                i * angle_increment - (abs(angle_min) - M_PI_2) < ANGLE_CONSIDERED;
+                i++) {
+            float cur = laserScanMsg->ranges[i]* abs(cos(abs(angle_min+i*angle_increment)));
+            if(cur<right_mean){
+                right_mean=cur;
             }
-
-            assignment2::WaypointMoveGoal wp_goal;
-            wp_goal.x = (*closest_it).first;
-            wp_goal.y = (*closest_it).second;
-            ROS_INFO("Next Waypoint x:%f y:%f", wp_goal.x, wp_goal.y);
-
-            feedback_.status = {"Robot resumes navigation and scanning..."};
-            as_.publishFeedback(feedback_);
-
-            // Send the goal with result and feedback callbacks, and no active callback
-            ac.sendGoal(
-                wp_goal,
-                boost::bind(&Coordinator::resultCallback, this, _1, _2),  
-                WaypointMoveClient::SimpleActiveCallback(),
-                boost::bind(&Coordinator::feedbackCallback, this, _1)
-            );
-
-            bool finished_before_timeout = ac.waitForResult(ros::Duration(500.0));
-            if (finished_before_timeout) {
-                actionlib::SimpleClientGoalState state = ac.getState();
-                ROS_INFO("Waypoint processing result: %s", state.toString().c_str());
-            } else {
-                ROS_INFO("Waypoint not processed before the timeout.");
-            }
-
-            // Update curr_pos
-            curr_pos = get_robot_pos();
-
-            // Remove the previous waypoint from the vector
-            waypoints.erase(closest_it);
-            
-            ++counter;
-            feedback_.status = {"Robot has processed a waypoint (" + std::to_string(counter) + "/" + std::to_string(tot_waypoints) + ")."};
-            as_.publishFeedback(feedback_);
-
-            ros::ServiceClient ad_client = nh_.serviceClient<assignment2::apriltag_detect>("apriltags_detected_service");
-            assignment2::apriltag_detect ad_srv;
-
-            if(ad_client.call(ad_srv)) {
-                ROS_INFO("Call to apriltags_detected_service: SUCCESSFUL.");
-                // TAGS FILTERING AND MANAGEMENT
-                std::vector<int> ids = ad_srv.response.ids;
-                for(int i=0; i<ids.size(); i++) {
-                    auto it = map_atfound.find(ids[i]);
-                    if(it != map_atfound.end()) {
-                        map_atfound[ids[i]] = true;
-                        map_atcoord[ids[i]] = std::make_pair(ad_srv.response.x[i], ad_srv.response.y[i]);
-                    }
-                }
-            }
-            else {
-                ROS_ERROR("Call to apriltags_detected_service: FAILED.");
-                return;
-            }
-
-            // FEEDBACK ON ACTION FOR HOW MANY TAGS HAVE BEEN FOUND (with ids)
-            int ids_counter = 0;
-            std::string ids_list1 =  "";
-            std::string ids_list2 =  "";
-            for(int id : ids) {
-                if(map_atfound[id]==true) {
-                    ids_counter++;
-                    ids_list1 = ids_list1 + " " + std::to_string(id);
-                } else {
-                    ids_list2 = ids_list2 + " " + std::to_string(id);
-                }
-            }
-            feedback_.status = {"Apriltags search current status: "+std::to_string(ids_counter)+"/"+std::to_string(ids.size()) ,
-                                "Apriltags found:  " + ids_list1,
-                                "Apriltags missing:" + ids_list2};
-            as_.publishFeedback(feedback_);
+            counter_right++;
         }
-
-        ROS_INFO("All Waypoints processed, coordinator node shuts down.");
-        feedback_.status = {"Robot processed every waypoint. Navigation and Scanning operations completed."};
-        as_.publishFeedback(feedback_);
-        std::this_thread::sleep_for (std::chrono::milliseconds(500));
-
-        // RESULT ON ACTION
-        std::vector<float> res_x;
-        std::vector<float> res_y;
-        std::vector<uint8_t>  res_f;
-        for(int id : ids) {
-            if(map_atfound[id]==true) {
-                res_x.push_back(map_atcoord[id].first);
-                res_y.push_back(map_atcoord[id].second);
-                res_f.push_back(1);
-            } else {
-                res_x.push_back(0.0f);
-                res_y.push_back(0.0f);
-                res_f.push_back(0);
+        int counter_left = 0;
+        for(int i = (abs(angle_min) + M_PI_2)/angle_increment; 
+                abs(i * angle_increment - abs(angle_min) - M_PI_2)  < ANGLE_CONSIDERED;
+                i--) {
+            float cur = laserScanMsg->ranges[i]* abs(cos(abs(angle_min+i*angle_increment)));
+            if(cur<left_mean){
+                left_mean=cur;
             }
+            counter_left++;
         }
-        result_.ids = ids;
-        result_.x   = res_x;
-        result_.y   = res_y;
-        result_.found = res_f;
-        as_.setSucceeded(result_);
-    }
-
-    private:
-
-    // Feedback callback function
-    void feedbackCallback(const FeedbackPtr& feedback) {
-        ROS_INFO("Current robot status: %s", feedback->status.c_str());
-    }
-
-    // Result callback function
-    void resultCallback(const actionlib::SimpleClientGoalState& state, const ResultPtr& result) {
-        if (result->reached)
-            ROS_INFO("Waypoint reached successfully!");
+        if(right_mean > left_mean)
+            vel.angular.z = -ANGULAR_VEL;
         else
-            ROS_INFO("Waypoint NOT reached as planned.");
+            vel.angular.z = ANGULAR_VEL;
+        velPub.publish(vel);
+    }
+}
+
+bool detection_routine(assignment2::object_detect::Request &req, assignment2::object_detect::Response &res)
+{
+    if(req.ready == false) {
+        ROS_WARN("Detection request is set to false.");
+        return false;
     }
 
-    float distanceSquared(float x1, float y1, float x2, float y2) {
-        return std::pow(x1 - x2, 2) + std::pow(y1 - y2, 2);
+    ROS_INFO("Service called. Detection routine starts.");
+
+    MoveBaseClient ac("move_base", true);
+
+    // Wait for the action server to be available
+    ROS_INFO("Waiting for the move_base action server to start...");
+    ac.waitForServer();
+    ROS_INFO("move_base action server is ready.");
+
+    std::vector<std::pair<float, float>> docks_offsets = {
+        std::make_pair(-DIST, 0), 
+        std::make_pair(0, -DIST), 
+        std::make_pair(DIST, 0)
+    };
+    std::vector<std::pair<float, float>> corns_offsets = {
+        std::make_pair(-DIST, -DIST), 
+        std::make_pair(DIST, -DIST)
+    };
+
+    std::vector<std::pair<float, float>> docks, corns;
+    for(auto off : docks_offsets) 
+        docks.push_back(std::make_pair(TABLE_2_X + off.first, TABLE_2_Y + off.second));
+    for(auto off : corns_offsets) 
+        corns.push_back(std::make_pair(TABLE_2_X + off.first, TABLE_2_Y + off.second));
+
+    ROS_INFO("Docking positions:");
+    for(auto p : docks)
+        ROS_INFO("x=%f y=%f", p.first, p.second);
+    ROS_INFO("Corner positions:");
+    for(auto p : corns)
+        ROS_INFO("x=%f y=%f", p.first, p.second);
+
+    std::vector<std::vector<float>> docks_or = {
+        {0.0, 0.0, 0.0, 1.0},
+        {0.0, 0.0, 0.707, 0.707},
+        {0.0, 0.0, 1.0, 0.0}
+    };
+
+    // Traverse the corridor before starting movement
+    traverse_corridor();
+
+    std::vector<float> objs_x, objs_y, docks_x, docks_y;
+    std::vector<int> ids;
+
+    for(int i=0; i<docks.size(); i++)
+    {
+        move_base_msgs::MoveBaseGoal goal;
+        goal.target_pose.header.frame_id = "map"; 
+        goal.target_pose.header.stamp = ros::Time::now();
+        goal.target_pose.pose.position.x = docks[i].first;
+        goal.target_pose.pose.position.y = docks[i].second;
+        goal.target_pose.pose.position.z = 0.0; 
+        goal.target_pose.pose.orientation.x = docks_or[i][0];
+        goal.target_pose.pose.orientation.y = docks_or[i][1];
+        goal.target_pose.pose.orientation.z = docks_or[i][2];
+        goal.target_pose.pose.orientation.w = docks_or[i][3];
+
+        ROS_INFO("[%u/%lu] Sending goal (docking station).", i+1, docks.size());
+        ac.sendGoal(goal);
+        ac.waitForResult();
+        ros::Duration(1.0).sleep();  // delay
+
+        // Corner visit
+        if(i < corns.size()) {
+            move_base_msgs::MoveBaseGoal goal_corner;
+            goal_corner.target_pose.header.frame_id = "map"; 
+            goal_corner.target_pose.header.stamp = ros::Time::now();
+            goal_corner.target_pose.pose.position.x = corns[i].first;
+            goal_corner.target_pose.pose.position.y = corns[i].second;
+            goal_corner.target_pose.pose.position.z = 0.0; 
+            goal_corner.target_pose.pose.orientation.x = 1.0;
+            goal_corner.target_pose.pose.orientation.y = 0.0;
+            goal_corner.target_pose.pose.orientation.z = 0.0;
+            goal_corner.target_pose.pose.orientation.w = 0.0;
+
+            ROS_INFO("[%u/%lu] Sending goal (corner).", i+1, corns.size());
+            ac.sendGoal(goal_corner); 
+            ac.waitForResult();
+            ros::Duration(1.0).sleep();
+        }
     }
 
-    std::pair<float,float>  get_robot_pos() {
-        tf::StampedTransform transform;
-        tf::TransformListener listener;
-        listener.waitForTransform("map", "base_link", ros::Time(0), ros::Duration(3.0));
-        listener.lookupTransform("map", "base_link", ros::Time(0), transform);
+    res.objs_x = objs_x;
+    res.objs_y = objs_y;
+    res.docks_x = docks_x;
+    res.docks_y = docks_y;
+    res.ids = ids;
 
-        float x = transform.getOrigin().x();
-        float y = transform.getOrigin().y();
-
-        std::pair<float, float> pos = {x, y};
-
-        return pos;
-    }
-
-};
+    return true;
+}
 
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "node_B");
-    Coordinator Coordinator("Apriltag_Search");
+    ros::NodeHandle n;
+    ros::ServiceServer service = n.advertiseService("detection_srv", detection_routine);
+    ROS_INFO("Object detection service available.");
+
     ros::spin();
     return 0;
 }
