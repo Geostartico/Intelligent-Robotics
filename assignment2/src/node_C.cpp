@@ -13,6 +13,7 @@
 #include "assignment2/apriltag_detect.h"
 #include "assignment2/WaypointMoveAction.h"
 #include "assignment2/ApriltagSearchAction.h"
+#include "assignment2/ObjectMoveAction.h"
 #include <moveit/move_group_interface/move_group_interface.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
 #include <moveit_msgs/DisplayTrajectory.h>
@@ -22,7 +23,7 @@ const float APPRO = 0.30;
 const float OPENI = 0.10;
 const float CLOSEI = 0.02;
 const std::vector<double> HOME_JOINT_POSITION = {1.48, 1, 1.5, 1.56, -1, 1.39, 1.5};
-typedef actionlib::SimpleActionServer<assignment2::WaypointMoveAction> Server;
+typedef actionlib::SimpleActionServer<assignment2::ObjectMoveAction> Server;
 
 class ArmMovementServer{
     
@@ -35,16 +36,13 @@ class ArmMovementServer{
         ArmMovementServer(std::string name):as(nh_, name, boost::bind(&ArmMovementServer::movementOnGoal, this, _1), false),
             action_name(name){as.start();}
         
-        void movementOnGoal(){
+        void movementOnGoal(const assignment2::ObjectMoveGoal::ConstPtr &goal){
 
             moveit::planning_interface::MoveGroupInterface moveGroup("arm_torso");
             moveGroup.setPoseReferenceFrame("base_footprint");
             moveGroup.setPlanningTime(10.0);
             moveit::planning_interface::MoveGroupInterface::Plan plan;
-            moveit::planning_interface::PlanningSceneInterface planningSceneInterface;
-
-            
-            
+            moveit::planning_interface::PlanningSceneInterface planningSceneInterface;   
         }
 
     private:
@@ -74,8 +72,8 @@ class ArmMovementServer{
                 point.positions.push_back(OPENI);
                 point.positions.push_back(OPENI);
             }else{
-                point.positions.push_back(OPENI);
-                point.positions.push_back(OPENI);
+                point.positions.push_back(CLOSEI);
+                point.positions.push_back(CLOSEI);
             }
             point.time_from_start = ros::Duration(1.5);
             goal.trajectory.points.push_back(point);
@@ -88,6 +86,35 @@ class ArmMovementServer{
             }
             ROS_ERROR("gripper failure");
             return false;
+        }
+
+        bool moveArmToPoseTGT(moveit::planning_interface::MoveGroupInterface& moveGroup, moveit::planning_interface::MoveGroupInterface::Plan& plan, geometry_msgs::Pose& tgt){
+            
+            moveGroup.setPoseTarget(tgt);
+            moveit::core::MoveItErrorCode planResult = moveGroup.plan(plan);
+            if (planResult){
+                ROS_INFO("arm moving to tgt pose");
+                moveGroup.move();
+                ros::Duration(5.0).sleep();
+                return true;
+            }
+
+            ROS_ERROR("Error in movement to TGT");
+            return false;
+        }
+
+        void moveLinearTGT(moveit::planning_interface::MoveGroupInterface& moveGroup, moveit::planning_interface::MoveGroupInterface::Plan& plan, geometry_msgs::Pose& tgt){
+            moveit_msgs::RobotTrajectory path;
+            float pathCartesian = moveGroup.computeCartesianPath(std::vector<geometry_msgs::Pose>{tgt}, 0.03, path);
+            if (pathCartesian > 0){
+                ROS_INFO("Arm in cartesian movement");
+                plan.trajectory_=path;
+                moveGroup.execute(plan);
+                ros::Duration(5.0).sleep();
+                return;
+            }
+            ROS_ERROR("no cartesian path available");
+            return;
         }   
 };
 
@@ -101,9 +128,6 @@ int main(int argc, char** argv) {
 
     ros::AsyncSpinner spinner(1);
     spinner.start();
-
-    // MoveIt setup    // Nome del gruppo del braccio
-    moveit::planning_interface::MoveGroupInterface gripper_group("gripper"); // Nome del gruppo del gripper
 
 
     return 0;

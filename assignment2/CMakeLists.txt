@@ -27,6 +27,7 @@ add_action_files(
     FILES
     WaypointMove.action
     ApriltagSearch.action
+    ObjectMove.action
 )
 
 generate_messages(
