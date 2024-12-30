@@ -17,8 +17,14 @@
 #include <moveit/move_group_interface/move_group_interface.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
 #include <moveit_msgs/DisplayTrajectory.h>
+#include <gazebo_ros_link_attacher/Attach.h>
+#include <moveit_msgs/AttachedCollisionObject.h>
 
 
+
+const std::set<int> prism { 1, 2, 3};
+const std::set<int> cube { 4, 5, 6};
+const std::set<int> triangle { 7, 8, 9};
 const float APPRO = 0.30;
 const float OPENI = 0.10;
 const float CLOSEI = 0.02;
@@ -58,6 +64,63 @@ class ArmMovementServer{
         }
 
     private:
+
+        std::string get_name(int apriltag){
+            if(prism.find(apriltag)!=prism.end()){
+                return "Hexagon";
+            }
+            if(prism.find(apriltag)!=prism.end()){
+                return "Triangle";
+            }
+            if(prism.find(apriltag)!=prism.end()){
+                return "cube";
+            }
+        }
+        void attach_detach_object(int id, bool attach){
+            moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
+            ros::ServiceClient gazebo_attach = nh_.serviceClient<gazebo_ros_link_attacher::Attach>("/link_attacher_node/" + attach ? "attach" : "detach");
+            gazebo_ros_link_attacher::Attach attachRequest;
+            attachRequest.request.model_name_1 = "tiago";
+            attachRequest.request.link_name_1 = "arm_7_link";
+            std::string objname = get_name(id) + "_" + std::to_string(id);
+            attachRequest.request.model_name_2 = objname;
+            attachRequest.request.link_name_2 = objname +"_link" ;
+            if(gazebo_attach.call(attachRequest)){
+                ROS_INFO("object attached/detached correctly in gazebo");
+            }
+            else{
+                ROS_ERROR("unable to complete attaching/detaching action in gazebo");
+            }
+            //moveit part
+            std::string object_id = "box_april_"+std::to_string(id);
+            std::vector<std::string> objects_query = {object_id};
+            moveit_msgs::CollisionObject coll = planning_scene_interface.getObjects(objects_query)[0];
+            std::string link_name = "arm_7_link";
+            std::vector<std::string> touch_links = {
+                "arm_1_link",
+                "arm_2_link",
+                "arm_3_link",
+                "arm_4_link",
+                "arm_5_link",
+                "arm_6_link",
+                "arm_7_link",
+                "gripper_left_finger_link",
+                "gripper_right_finger_link",
+            };
+            moveit_msgs::AttachedCollisionObject attached_object;
+            attached_object.link_name = link_name;
+            attached_object.object = coll;
+            attached_object.touch_links = touch_links;
+            if(attach){
+                attached_object.object.operation = moveit_msgs::CollisionObject::ADD;
+                planning_scene_interface.applyAttachedCollisionObject(attached_object);
+            }
+            else{
+                attached_object.object.operation = moveit_msgs::CollisionObject::REMOVE;
+                planning_scene_interface.applyAttachedCollisionObject(attached_object);
+            }
+        }
+
 
         void moveArmToHome() {
             moveit::planning_interface::MoveGroupInterface move_group("arm"); 
