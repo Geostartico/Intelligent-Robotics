@@ -43,6 +43,18 @@ class ArmMovementServer{
             moveGroup.setPlanningTime(10.0);
             moveit::planning_interface::MoveGroupInterface::Plan plan;
             moveit::planning_interface::PlanningSceneInterface planningSceneInterface;   
+
+            moveArmToHome();
+            toggleGripper(true);
+            if (goal -> pick){
+                /*pick routine code here*/
+                toggleGripper(false);
+                moveArmToHome();
+            }else {
+                /*place routine code here*/
+                toggleGripper(true);
+                moveArmToHome();
+            }
         }
 
     private:

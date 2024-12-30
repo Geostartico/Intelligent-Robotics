@@ -1,15 +1,14 @@
 # GOAL
-int32[]     ids
-float32[]   x
-float32[]   y
-float32[]   z
-bool[]      pick
-
+bool      pick
+int32[]   ids
+int32     tgt_id
+geometry_msgs/Pose pick_tgt_pose  
+geometry_msgs/Pose place_tgt_pose
 
 ---
 
 # RESULT
-int32[]     ids
+bool success
 
 ---
 
