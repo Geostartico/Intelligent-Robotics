@@ -37,6 +37,8 @@ class ArmMovementServer{
     ros::NodeHandle nh_;
     Server as;
     std::string action_name;
+    assignment2::ObjectMoveFeedback feedback_;
+    assignment2::ObjectMoveResult result_;
     
     public:
         ArmMovementServer(std::string name):as(nh_, name, boost::bind(&ArmMovementServer::movementOnGoal, this, _1), false),
@@ -53,13 +55,36 @@ class ArmMovementServer{
             moveArmToHome();
             toggleGripper(true);
             if (goal -> pick){
-                /*pick routine code here*/
+                
+                geometry_msgs::Pose tgtPose = goal->pick_tgt_pose;
+                tgtPose.position.z -= APPRO;
+                moveArmToPoseTGT(moveGroup,plan,tgtPose);
+                ros::Duration(3.0).sleep();
+                tgtPose.position.z+= APPRO;
+                moveLinearTGT(moveGroup,plan,tgtPose);
+                ros::Duration(2.0).sleep();
+                attach_detach_object(goal->tgt_id, true);
                 toggleGripper(false);
+                tgtPose.position.z-= APPRO;
+                moveLinearTGT(moveGroup,plan,tgtPose);
+                ros::Duration(2.0).sleep();
                 moveArmToHome();
+                result_.success = true;
             }else {
-                /*place routine code here*/
+                geometry_msgs::Pose tgtPose = goal -> place_tgt_pose;
+                tgtPose.position.z -= APPRO;
+                moveArmToPoseTGT(moveGroup, plan, tgtPose);
+                ros::Duration(3.0).sleep();
+                tgtPose.position.z+= APPRO;
+                moveLinearTGT(moveGroup,plan,tgtPose);
+                ros::Duration(2.0).sleep();
+                attach_detach_object(goal->tgt_id, false);
                 toggleGripper(true);
+                tgtPose.position.z-= APPRO;
+                moveLinearTGT(moveGroup,plan,tgtPose);
+                ros::Duration(2.0).sleep();
                 moveArmToHome();
+                result_.success = true;
             }
         }
 
@@ -75,6 +100,7 @@ class ArmMovementServer{
             if(prism.find(apriltag)!=prism.end()){
                 return "cube";
             }
+            return("error");
         }
         void attach_detach_object(int id, bool attach){
             moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
@@ -199,11 +225,7 @@ class ArmMovementServer{
 int main(int argc, char** argv) {
     ros::init(argc, argv, "ArmMovementServer");
 
-    ros::NodeHandle nh;
-
-    ros::AsyncSpinner spinner(1);
-    spinner.start();
-
+    ArmMovementServer move_object("move_object");
 
     return 0;
 }
