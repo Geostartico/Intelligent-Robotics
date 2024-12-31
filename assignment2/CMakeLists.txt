@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   moveit_core
   moveit_ros_planning_interface
   shape_msgs
+  gazebo_ros_link_attacher
 )
 
 add_service_files(
@@ -84,6 +85,6 @@ add_executable(node_B src/node_B.cpp)
 add_dependencies(node_B assignment2_generate_messages_cpp)
 target_link_libraries(node_B ${catkin_LIBRARIES})
 
-add_executable(node_C src/node_C.cpp)
-add_dependencies(node_C assignment2_generate_messages_cpp)
-target_link_libraries(node_C ${catkin_LIBRARIES})
+#add_executable(node_C src/node_C.cpp)
+#add_dependencies(node_C assignment2_generate_messages_cpp)
+#target_link_libraries(node_C ${catkin_LIBRARIES})

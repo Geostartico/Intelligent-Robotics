@@ -1,5 +1,5 @@
 <launch> 
-    <include file="$(find tiago_iaslab_simulation)/launch/apriltag.launch" /> 
+    <include file="$(find tiago_iaslab_simulation)/launch/apriltag2.launch" /> 
     <include file="$(find tiago_iaslab_simulation)/launch/navigation.launch" /> 
-    <node pkg="tiago_iaslab_simulation" type="apriltag_ids_generator_node" name="apriltag_ids_generator_node"/>
+    <node pkg="tiago_iaslab_simulation" type="get_straightline_node" name="get_straightline_node"/>
 </launch>
