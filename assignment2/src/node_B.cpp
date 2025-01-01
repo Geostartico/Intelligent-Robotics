@@ -5,6 +5,7 @@
 #include <vector>
 #include <map>
 #include "assignment2/object_detect.h"
+#include "assignment2/ObjectMoveAction.h"
 #include <sensor_msgs/LaserScan.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <tf/transform_datatypes.h>
@@ -87,7 +88,7 @@ void sendGoalToMoveBase(double x, double y, const geometry_msgs::Quaternion& ori
     }
 }
 void go_clockwise(int target_pos){
-    //main objective:survive
+    //current objective:survive
     geometry_msgs::Quaternion escape_orientation;
     if(curpos==2){
         escape_orientation = POS_X_ORIENTATION;
@@ -222,26 +223,50 @@ void goAround(int target_pos){
 }
 
 void put_down_routine(std::vector<apriltag_str> tags, int docked_pos, apriltag_str table_tag, int& put_objs, float m, float q){
-        goAround(docked_pos);
-        //pickupobject(cur_obj);
-        float put_down_x = table_tag.x + ((put_objs + 1) * X_STEP);
-        float put_down_y = table_tag.x + ((put_objs + 1) * X_STEP) * m + q;
-        float dist1 = distance(docks[0].first, docks[0].second, put_down_x, put_down_y);
-        float dist2 = distance(docks[1].first, docks[1].second, put_down_x, put_down_y);
-        float dist3 = distance(docks[2].first, docks[2].second, put_down_x, put_down_y);
-        if(dist1 < dist2 && dist1 < dist3){
-            goAround(1);
-            //put_down
-        }
-        else if(dist2 < dist3){
-            goAround(2);
-            //put_down
-        }
-        else{
-            goAround(3);
-            //put_down
-        }
+        for (const auto& tag:tags)
+        {
+            goAround(docked_pos);
+            actionlib::SimpleActionClient<assignment2::ObjectMoveAction> ac("move_object", true);
+            ROS_INFO("Waiting for Movemente_Handler server to start...");
+            ac.waitForServer();
 
+            assignment2::ObjectMoveGoal goal_pick;
+            goal_pick.pick = true;
+            goal_pick.tgt_id = tag.id;
+            goal_pick.tgt_pose.position.x =  tag.x;
+            goal_pick.tgt_pose.position.y =  tag.y;
+            goal_pick.tgt_pose.position.z =  tag.z;
+            goal_pick.tgt_pose.orientation.w = tag.yaw; 
+            ac.sendGoal(goal_pick);
+            ac.waitForResult(ros::Duration(30.0));
+            ROS_INFO("Movemente_Handler server started. Now looking for the closest waypoint.");
+            //pickupobject(cur_obj);
+            float put_down_x = table_tag.x + ((put_objs + 1) * X_STEP);
+            float put_down_y = table_tag.x + ((put_objs + 1) * X_STEP) * m + q;
+            float dist1 = distance(docks[0].first, docks[0].second, put_down_x, put_down_y);
+            float dist2 = distance(docks[1].first, docks[1].second, put_down_x, put_down_y);
+            float dist3 = distance(docks[2].first, docks[2].second, put_down_x, put_down_y);
+
+            if(dist1 < dist2 && dist1 < dist3){
+                goAround(1);
+            }
+            else if(dist2 < dist3){
+                goAround(2);
+            }
+            else{
+                goAround(3);
+            }
+            //put down
+            assignment2::ObjectMoveGoal goal_place;
+            goal_place.pick = false;
+            goal_place.tgt_id = tag.id;
+            goal_place.tgt_pose.position.x =  put_down_x;
+            goal_place.tgt_pose.position.y =  put_down_y;
+            goal_place.tgt_pose.position.z =  tag.z;
+            goal_place.tgt_pose.orientation.w = 0; 
+            ac.sendGoal(goal_place);
+            ac.waitForResult(ros::Duration(30.0));
+        }
 }
 bool detection_routine(assignment2::object_detect::Request &req, assignment2::object_detect::Response &res)
 {

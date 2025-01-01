@@ -1,6 +1,5 @@
 # GOAL
 bool      pick
-int32[]   ids
 int32     tgt_id
 geometry_msgs/Pose tgt_pose  
 

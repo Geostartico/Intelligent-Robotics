@@ -224,8 +224,11 @@ class ArmMovementServer{
 
 int main(int argc, char** argv) {
     ros::init(argc, argv, "ArmMovementServer");
+    ros::AsyncSpinner spinner(1);
+    spinner.start();
+
 
     ArmMovementServer move_object("move_object");
-
+    ros::waitForShutdown();
     return 0;
 }
