@@ -136,6 +136,69 @@ void go_clockwise(int target_pos){
         }
     }
 }
+void go_counter_clockwise(int target_pos){
+    //main objective:survive
+    geometry_msgs::Quaternion escape_orientation;
+    if(curpos==2){
+        escape_orientation = NEG_X_ORIENTATION;
+    }
+    if(curpos==3 || curpos==4){
+        escape_orientation = POS_Y_ORIENTATION;
+    }
+    if(curpos==6 || curpos==1){
+        escape_orientation = NEG_Y_ORIENTATION;
+    }
+    sendGoalToMoveBase(docks[curpos-1].first, docks[curpos-1].second, escape_orientation);
+
+    if(curpos==6&&target_pos<curpos){
+        sendGoalToMoveBase(corns[3].first, corns[3].second, POS_X_ORIENTATION);
+        sendGoalToMoveBase(corns[3].first, corns[3].second, NEG_Y_ORIENTATION);
+        curpos--;
+        sendGoalToMoveBase(docks[curpos-1].first, docks[curpos-1].second, NEG_Y_ORIENTATION);
+        if(target_pos==5){
+            sendGoalToMoveBase(docks[curpos-1].first, docks[curpos-1].second, POS_Y_ORIENTATION);
+            return;
+        }
+    }
+    if(curpos==5&&target_pos<curpos){
+        sendGoalToMoveBase(corns[2].first, corns[2].second, POS_Y_ORIENTATION);
+        sendGoalToMoveBase(corns[2].first, corns[2].second, POS_X_ORIENTATION);
+        curpos--;
+        sendGoalToMoveBase(docks[curpos-1].first, docks[curpos-1].second, POS_X_ORIENTATION);
+        if(target_pos==4){
+            sendGoalToMoveBase(docks[curpos-1].first, docks[curpos-1].second, NEG_X_ORIENTATION);
+            return;
+        }
+    }
+    if(curpos==4&&target_pos>curpos){
+        curpos--;
+        sendGoalToMoveBase(docks[curpos-1].first, docks[curpos-1].second, POS_Y_ORIENTATION);
+        if(target_pos==3){
+            sendGoalToMoveBase(docks[curpos-1].first, docks[curpos-1].second, NEG_X_ORIENTATION);
+            return;
+        }
+    }
+    if(curpos==3&&target_pos>curpos){
+        sendGoalToMoveBase(corns[1].first, corns[1].second, NEG_X_ORIENTATION);
+        sendGoalToMoveBase(corns[1].first, corns[1].second, POS_Y_ORIENTATION);
+        curpos--;
+        sendGoalToMoveBase(docks[curpos-1].first, docks[curpos-1].second, NEG_Y_ORIENTATION);
+        if(target_pos==2){
+            sendGoalToMoveBase(docks[curpos-1].first, docks[curpos-1].second, NEG_Y_ORIENTATION);
+            return;
+        }
+    }
+    if(curpos==2&&target_pos>curpos){
+        sendGoalToMoveBase(corns[0].first, corns[0].second, NEG_Y_ORIENTATION);
+        sendGoalToMoveBase(corns[0].first, corns[0].second, NEG_X_ORIENTATION);
+        curpos--;
+        sendGoalToMoveBase(docks[curpos-1].first, docks[curpos-1].second, NEG_X_ORIENTATION);
+        if(target_pos==1){
+            sendGoalToMoveBase(docks[curpos-1].first, docks[curpos-1].second, POS_X_ORIENTATION);
+            return;
+        }
+    }
+}
 void goAround(int target_pos){
     if(target_pos >curpos){
         go_clockwise(target_pos);
