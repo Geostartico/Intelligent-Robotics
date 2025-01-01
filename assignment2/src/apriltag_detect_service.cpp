@@ -35,6 +35,7 @@ float TRIANGLE_BASE = 0.05;
 float TRIANGLE_HEIGHT = 0.035;
 float TRIANGLE_LENGTH = 0.07;
 float TABLE_SIDE = 0.9;
+float TABLE_HEIGHT = 0.775;
 float TABLE_1_X = 7.82;
 float TABLE_1_Y = -1.96;
 float TABLE_2_X = 7.82;
@@ -57,18 +58,18 @@ void add_tables(){
     moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
     moveit_msgs::CollisionObject collision_object1;
     collision_object1.operation = collision_object1.ADD;
-    collision_object1.id = "table_2";
+    collision_object1.id = "table_1";
     collision_object1.header.frame_id = "/map"; // Replace with the appropriate frame ID
     shape_msgs::SolidPrimitive primitive1;
     primitive1.type = primitive1.BOX;
     primitive1.dimensions.resize(3);
     primitive1.dimensions[primitive1.BOX_X]= TABLE_SIDE; // Dimensions: X, Y, Z
     primitive1.dimensions[primitive1.BOX_Y]= TABLE_SIDE; // Dimensions: X, Y, Z
-    primitive1.dimensions[primitive1.BOX_Z]= TABLE_SIDE; // Dimensions: X, Y, Z
+    primitive1.dimensions[primitive1.BOX_Z]= TABLE_HEIGHT; // Dimensions: X, Y, Z
     geometry_msgs::Pose box_pose1;
     box_pose1.position.x = TABLE_1_X;
     box_pose1.position.y = TABLE_1_Y;
-    box_pose1.position.z = TABLE_SIDE/2;
+    box_pose1.position.z = TABLE_HEIGHT/2;
     box_pose1.orientation.w = 1.0;
     collision_object1.primitives.push_back(primitive1);
     collision_object1.primitive_poses.push_back(box_pose1);
@@ -83,11 +84,11 @@ void add_tables(){
     primitive2.dimensions.resize(3);
     primitive2.dimensions[primitive2.BOX_X]= TABLE_SIDE; // Dimensions: X, Y, Z
     primitive2.dimensions[primitive2.BOX_Y]= TABLE_SIDE; // Dimensions: X, Y, Z
-    primitive2.dimensions[primitive2.BOX_Z]= TABLE_SIDE; // Dimensions: X, Y, Z
+    primitive2.dimensions[primitive2.BOX_Z]= TABLE_HEIGHT; // Dimensions: X, Y, Z
     geometry_msgs::Pose box_pose2;
     box_pose2.position.x = TABLE_2_X;
     box_pose2.position.y = TABLE_2_Y;
-    box_pose2.position.z = TABLE_SIDE/2;
+    box_pose2.position.z = TABLE_HEIGHT/2;
     box_pose2.orientation.w = 1.0;
     collision_object2.primitives.push_back(primitive2);
     collision_object2.primitive_poses.push_back(box_pose2);
