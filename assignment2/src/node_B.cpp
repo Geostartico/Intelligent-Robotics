@@ -65,7 +65,8 @@ void sendGoalToMoveBase(double x, double y, const geometry_msgs::Quaternion& ori
              x, y, orientation.x, orientation.y, orientation.z, orientation.w);
     // Assuming you have already created and initialized a MoveBaseClient instance called `ac`
     ac.sendGoal(goal);
-    ac.waitForResult();
+    ros::Duration timeout(20);
+    ac.waitForResult(timeout);
 
     if (ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED) {
         ROS_INFO("Goal reached successfully!");
@@ -243,7 +244,8 @@ bool detection_routine(assignment2::object_detect::Request &req, assignment2::ob
     std::vector<float> objs_x, objs_y, docks_x, docks_y;
     std::vector<int> ids;
 
-    sendGoalToMoveBase(docks[0].first, 0.0, POS_X_ORIENTATION);
+    sendGoalToMoveBase(docks[1].first, docks[1].second, NEG_Y_ORIENTATION);
+    curpos=2;
     goAround(6);
     //// Intermediate point
     //sendGoalToMoveBase(docks[0].first, 0.0, NEG_Y_ORIENTATION);
