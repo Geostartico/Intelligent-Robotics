@@ -164,26 +164,26 @@ void go_counter_clockwise(int target_pos){
     sendGoalToMoveBase(docks[curpos-1].first, docks[curpos-1].second, escape_orientation);
 
     if(curpos==6&&target_pos<curpos){
-        sendGoalToMoveBase(corns[3].first, corns[3].second, POS_X_ORIENTATION);
         sendGoalToMoveBase(corns[3].first, corns[3].second, NEG_Y_ORIENTATION);
+        sendGoalToMoveBase(corns[3].first, corns[3].second, POS_X_ORIENTATION);
         curpos--;
-        sendGoalToMoveBase(docks[curpos-1].first, docks[curpos-1].second, NEG_Y_ORIENTATION);
+        sendGoalToMoveBase(docks[curpos-1].first, docks[curpos-1].second, POS_X_ORIENTATION);
         if(target_pos==5){
             sendGoalToMoveBase(docks[curpos-1].first, docks[curpos-1].second, POS_Y_ORIENTATION);
             return;
         }
     }
     if(curpos==5&&target_pos<curpos){
-        sendGoalToMoveBase(corns[2].first, corns[2].second, POS_Y_ORIENTATION);
         sendGoalToMoveBase(corns[2].first, corns[2].second, POS_X_ORIENTATION);
+        sendGoalToMoveBase(corns[2].first, corns[2].second, POS_Y_ORIENTATION);
         curpos--;
-        sendGoalToMoveBase(docks[curpos-1].first, docks[curpos-1].second, POS_X_ORIENTATION);
+        sendGoalToMoveBase(docks[curpos-1].first, docks[curpos-1].second, POS_Y_ORIENTATION);
         if(target_pos==4){
             sendGoalToMoveBase(docks[curpos-1].first, docks[curpos-1].second, NEG_X_ORIENTATION);
             return;
         }
     }
-    if(curpos==4&&target_pos>curpos){
+    if(curpos==4&&target_pos<curpos){
         curpos--;
         sendGoalToMoveBase(docks[curpos-1].first, docks[curpos-1].second, POS_Y_ORIENTATION);
         if(target_pos==3){
@@ -191,9 +191,9 @@ void go_counter_clockwise(int target_pos){
             return;
         }
     }
-    if(curpos==3&&target_pos>curpos){
-        sendGoalToMoveBase(corns[1].first, corns[1].second, NEG_X_ORIENTATION);
+    if(curpos==3&&target_pos<curpos){
         sendGoalToMoveBase(corns[1].first, corns[1].second, POS_Y_ORIENTATION);
+        sendGoalToMoveBase(corns[1].first, corns[1].second, NEG_X_ORIENTATION);
         curpos--;
         sendGoalToMoveBase(docks[curpos-1].first, docks[curpos-1].second, NEG_Y_ORIENTATION);
         if(target_pos==2){
@@ -201,11 +201,11 @@ void go_counter_clockwise(int target_pos){
             return;
         }
     }
-    if(curpos==2&&target_pos>curpos){
-        sendGoalToMoveBase(corns[0].first, corns[0].second, NEG_Y_ORIENTATION);
+    if(curpos==2&&target_pos<curpos){
         sendGoalToMoveBase(corns[0].first, corns[0].second, NEG_X_ORIENTATION);
+        sendGoalToMoveBase(corns[0].first, corns[0].second, NEG_Y_ORIENTATION);
         curpos--;
-        sendGoalToMoveBase(docks[curpos-1].first, docks[curpos-1].second, NEG_X_ORIENTATION);
+        sendGoalToMoveBase(docks[curpos-1].first, docks[curpos-1].second, NEG_Y_ORIENTATION);
         if(target_pos==1){
             sendGoalToMoveBase(docks[curpos-1].first, docks[curpos-1].second, POS_X_ORIENTATION);
             return;
@@ -283,8 +283,12 @@ bool detection_routine(assignment2::object_detect::Request &req, assignment2::ob
 
     sendGoalToMoveBase(docks[1].first, docks[1].second, NEG_Y_ORIENTATION);
     curpos=2;
-    goAround(6);
+    goAround(1);
+    goAround(2);
+    goAround(3);
     goAround(4);
+    goAround(5);
+    goAround(6);
     //
     // Client to receive the current status of the AprilTags Detection 
     ros::NodeHandle nh_;
