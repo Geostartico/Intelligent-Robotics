@@ -2,4 +2,5 @@
     <include file="$(find tiago_iaslab_simulation)/launch/apriltag2.launch" /> 
     <include file="$(find tiago_iaslab_simulation)/launch/navigation.launch" /> 
     <node pkg="tiago_iaslab_simulation" type="get_straightline_node" name="get_straightline_node"/>
+    <node pkg="assignment2" type="node_C" name="node_C"/>
 </launch>

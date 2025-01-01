@@ -1,4 +1,4 @@
 <launch> 
-    <node pkg="assignment1" type="apriltag_locator" name="apriltag_locator" output="log"/>
-    <node pkg="assignment1" type="node_B" name="node_B" output="screen"/>
+    <node pkg="assignment2" type="apriltag_locator" name="apriltag_locator" output="log"/>
+    <node pkg="assignment2" type="node_A" name="node_B" output="screen"/>
 </launch>
