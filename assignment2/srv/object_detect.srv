@@ -1,4 +1,6 @@
 bool ready
+float32 m
+float32 q
 ---
 float32[] objs_x
 float32[] objs_y

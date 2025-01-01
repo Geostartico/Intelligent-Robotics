@@ -9,6 +9,7 @@
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <tf/transform_datatypes.h>
 #include <geometry_msgs/Quaternion.h>
+#include "assignment2/apriltag_detect.h"
 
 
 // CONSTANTS
@@ -17,7 +18,15 @@ float TABLE_1_Y = -1.96;
 float TABLE_2_X = 7.82;
 float TABLE_2_Y = -3.01;
 float DIST      = 1.0;
+float X_STEP = 0.15;
 
+struct apriltag_str{
+    float x;
+    float y;
+    float z;
+    float yaw;
+    int id;
+};
 typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
 
 const geometry_msgs::Quaternion POS_X_ORIENTATION = [] {
@@ -47,6 +56,9 @@ const geometry_msgs::Quaternion NEG_Y_ORIENTATION = [] {
 int curpos= 1;
 std::vector<std::pair<float, float>> docks, corns;
 
+float distance(float x1,float y1,float x2,float y2){
+    return std::pow(std::pow(x1,2)-std::pow(x2,2),2) + std::pow(std::pow(y1,2)-std::pow(y2,2),2);
+}
 
 void sendGoalToMoveBase(double x, double y, const geometry_msgs::Quaternion& orientation) {
 
@@ -204,8 +216,33 @@ void goAround(int target_pos){
     if(target_pos >curpos){
         go_clockwise(target_pos);
     }
+    else if(target_pos < curpos){
+        go_counter_clockwise(target_pos);
+    }
 }
 
+void put_down_routine(std::vector<apriltag_str> tags, int docked_pos, apriltag_str table_tag, int& put_objs, float m, float q){
+        goAround(docked_pos);
+        //pickupobject(cur_obj);
+        float put_down_x = table_tag.x + ((put_objs + 1) * X_STEP);
+        float put_down_y = table_tag.x + ((put_objs + 1) * X_STEP) * m + q;
+        float dist1 = distance(docks[0].first, docks[0].second, put_down_x, put_down_y);
+        float dist2 = distance(docks[1].first, docks[1].second, put_down_x, put_down_y);
+        float dist3 = distance(docks[2].first, docks[2].second, put_down_x, put_down_y);
+        if(dist1 < dist2 && dist1 < dist3){
+            goAround(1);
+            //put_down
+        }
+        else if(dist2 < dist3){
+            goAround(2);
+            //put_down
+        }
+        else{
+            goAround(3);
+            //put_down
+        }
+
+}
 bool detection_routine(assignment2::object_detect::Request &req, assignment2::object_detect::Response &res)
 {
     if(req.ready == false) {
@@ -247,6 +284,55 @@ bool detection_routine(assignment2::object_detect::Request &req, assignment2::ob
     sendGoalToMoveBase(docks[1].first, docks[1].second, NEG_Y_ORIENTATION);
     curpos=2;
     goAround(6);
+    goAround(4);
+    //
+    // Client to receive the current status of the AprilTags Detection 
+    ros::NodeHandle nh_;
+    ros::ServiceClient ad_client = nh_.serviceClient<assignment2::apriltag_detect>("apriltags_detected_service");
+    assignment2::apriltag_detect ad_srv;
+    ad_srv.request.create_collisions = true;
+
+    std::vector<apriltag_str> dock4,dock5,dock6;
+    apriltag_str table_tag{0,0,0,0,-1};
+
+    if(ad_client.call(ad_srv)) {
+        ROS_INFO("Call to apriltags_detected_service: SUCCESSFUL.");
+        std::vector<int> ids = ad_srv.response.ids;
+        std::vector<float> x = ad_srv.response.x;
+        std::vector<float> y = ad_srv.response.y;
+        std::vector<float> z = ad_srv.response.z;
+        std::vector<float> yaw = ad_srv.response.yaw;
+        for(int i=0; i<ids.size(); i++) {
+            apriltag_str tmp{x[i],y[i],z[i],yaw[i],ids[i]};
+            if(ids[i]==10){
+                table_tag = tmp;
+                continue;
+            }
+            float dist4 = distance(docks[3].first, docks[3].second, x[i],y[i]);
+            float dist5 = distance(docks[4].first, docks[4].second, x[i],y[i]);
+            float dist6 = distance(docks[5].first, docks[5].second, x[i],y[i]);
+            if(dist4 < dist5 && dist4 < dist6){
+                dock4.push_back(tmp);
+            }
+            else if(dist5 < dist6){
+                dock5.push_back(tmp);
+            }
+            else{
+                dock6.push_back(tmp);
+            }
+        }
+    }
+    if(table_tag.id == -1){
+        ROS_ERROR("TABLE TAG NOT FOUND");
+        return false;
+    }
+
+    int put_objs = 0;
+
+    put_down_routine(dock4, 4, table_tag, put_objs, req.m, req.q);
+    put_down_routine(dock4, 5, table_tag, put_objs, req.m, req.q);
+    put_down_routine(dock4, 6, table_tag, put_objs, req.m, req.q);
+
     //// Intermediate point
     //sendGoalToMoveBase(docks[0].first, 0.0, NEG_Y_ORIENTATION);
 

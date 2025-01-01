@@ -28,6 +28,8 @@ int main(int argc, char **argv) {
 
     ros::ServiceClient detection_client = n.serviceClient<assignment2::object_detect>("/detection_srv");
     assignment2::object_detect srv_d;
+    srv_d.request.m = coeffs[0];
+    srv_d.request.q = coeffs[1];
     srv_d.request.ready = true;
 
     // Request to start the detection routine and get the object position and preferred docking stations
