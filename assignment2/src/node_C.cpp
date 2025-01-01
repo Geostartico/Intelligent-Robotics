@@ -56,7 +56,7 @@ class ArmMovementServer{
             toggleGripper(true);
             if (goal -> pick){
                 
-                geometry_msgs::Pose tgtPose = goal->pick_tgt_pose;
+                geometry_msgs::Pose tgtPose = goal->tgt_pose;
                 tgtPose.position.z -= APPRO;
                 moveArmToPoseTGT(moveGroup,plan,tgtPose);
                 ros::Duration(3.0).sleep();
@@ -71,7 +71,7 @@ class ArmMovementServer{
                 moveArmToHome();
                 result_.success = true;
             }else {
-                geometry_msgs::Pose tgtPose = goal -> place_tgt_pose;
+                geometry_msgs::Pose tgtPose = goal -> tgt_pose;
                 tgtPose.position.z -= APPRO;
                 moveArmToPoseTGT(moveGroup, plan, tgtPose);
                 ros::Duration(3.0).sleep();
