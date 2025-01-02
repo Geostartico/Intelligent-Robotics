@@ -18,8 +18,6 @@ find_package(catkin REQUIRED COMPONENTS
 
 add_service_files(
     FILES
-    map_service.srv
-    map_waypoints.srv
     apriltag_detect.srv
     object_detect.srv
 )
@@ -38,49 +36,33 @@ generate_messages(
     std_msgs
     geometry_msgs
 )
- 
-catkin_package(
-# INCLUDE_DIRS include
-# LIBRARIES intro_services
-  CATKIN_DEPENDS roscpp std_msgs
-# DEPENDS system_lib
-)
 
-catkin_package( 
+catkin_package(
   CATKIN_DEPENDS 
   roscpp 
   std_msgs 
   message_runtime
-  actionlib)
+  actionlib
+)
 
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
 )
 
-add_executable(map_waypoints_service src/map_waypoints_service.cpp)
-add_dependencies(map_waypoints_service assignment2_generate_messages_cpp)
-target_link_libraries(map_waypoints_service ${catkin_LIBRARIES})
-
-add_executable(apriltag_locator src/apriltag_locator.cpp)
-add_dependencies(apriltag_locator assignment2_generate_messages_cpp)
-target_link_libraries(apriltag_locator ${catkin_LIBRARIES})
-
-add_executable(apriltag_locator_service src/apriltag_detect_service.cpp)
-add_dependencies(apriltag_locator_service assignment2_generate_messages_cpp)
-target_link_libraries(apriltag_locator_service ${catkin_LIBRARIES})
-
-add_executable(movement_handler src/movement_handler.cpp)
-add_dependencies(movement_handler assignment2_generate_messages_cpp)
-target_link_libraries(movement_handler ${catkin_LIBRARIES})
-
-add_executable(test_moveit_collision src/test_moveit_collision.cpp)
-add_dependencies(test_moveit_collision assignment2_generate_messages_cpp)
-target_link_libraries(test_moveit_collision ${catkin_LIBRARIES})
+add_library(movement
+  src/movement.cpp
+)
+target_link_libraries(movement
+  ${catkin_LIBRARIES}
+)
 
 add_executable(node_A src/node_A.cpp)
 add_dependencies(node_A assignment2_generate_messages_cpp)
-target_link_libraries(node_A ${catkin_LIBRARIES})
+target_link_libraries(node_A
+  movement
+  ${catkin_LIBRARIES}
+)
 
 add_executable(node_B src/node_B.cpp)
 add_dependencies(node_B assignment2_generate_messages_cpp)
@@ -93,3 +75,15 @@ target_link_libraries(node_B_1 ${catkin_LIBRARIES})
 add_executable(node_C src/node_C.cpp)
 add_dependencies(node_C assignment2_generate_messages_cpp)
 target_link_libraries(node_C ${catkin_LIBRARIES})
+
+add_executable(apriltag_locator src/apriltag_locator.cpp)
+add_dependencies(apriltag_locator assignment2_generate_messages_cpp)
+target_link_libraries(apriltag_locator ${catkin_LIBRARIES})
+
+add_executable(apriltag_locator_service src/apriltag_detect_service.cpp)
+add_dependencies(apriltag_locator_service assignment2_generate_messages_cpp)
+target_link_libraries(apriltag_locator_service ${catkin_LIBRARIES})
+
+add_executable(node_C_tester src/node_C_tester.cpp)
+add_dependencies(node_C_tester assignment2_generate_messages_cpp)
+target_link_libraries(node_C_tester ${catkin_LIBRARIES})
