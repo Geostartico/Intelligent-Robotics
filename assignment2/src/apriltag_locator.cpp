@@ -2,14 +2,17 @@
 
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TransformStamped.h>
-#include <control_msgs/PointHeadAction.h>
-
 
 #include <apriltag_ros/AprilTagDetectionArray.h>
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/transform_listener.h>
+
+#include <control_msgs/PointHeadAction.h>
+#include <control_msgs/FollowJointTrajectoryAction.h>
+
+
 
 #include <actionlib/client/simple_action_client.h>
 
@@ -149,13 +152,36 @@ void lookDown() {
         ROS_ERROR("Head movement did not finish before the timeout");
     }
 }
+void move_torso(){
+    // Create client the torso_controller
+    actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> torsoClient("/torso_controller/follow_joint_trajectory", true);
+    ROS_INFO("waiting for torso server");
+    torsoClient.waitForServer();
 
+    // Set joint values
+    control_msgs::FollowJointTrajectoryGoal goal;
+    goal.trajectory.joint_names.push_back("torso_lift_joint");
+    trajectory_msgs::JointTrajectoryPoint point;
+    point.positions.push_back(1.0);
+    point.time_from_start = ros::Duration(1.0);
+    goal.trajectory.points.push_back(point);
+
+    // Send goal and check the result
+    torsoClient.sendGoal(goal);
+    if (torsoClient.waitForResult()) {
+        //ros::Duration(DELAY).sleep();
+        ROS_INFO("The torso moved successfully.");
+    }
+    else
+        ROS_ERROR("An error occurred while moving the torso.");
+}
 
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "locate_apriltag");
     ros::NodeHandle nh;
     lookDown();
+    move_torso();
     ROS_INFO_STREAM("locate_apriltag");
 
     ros::Subscriber tag_subscriber;
