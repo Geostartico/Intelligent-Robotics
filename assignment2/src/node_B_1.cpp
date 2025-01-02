@@ -3,6 +3,37 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TransformStamped.h>
 
+#include <apriltag_ros/AprilTagDetectionArray.h>
+
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf2_ros/transform_broadcaster.h>
+#include <tf2_ros/transform_listener.h>
+
+#include <control_msgs/PointHeadAction.h>
+#include <control_msgs/FollowJointTrajectoryAction.h>
+
+
+
+#include <actionlib/client/simple_action_client.h>
+
+#include <map>
+
+#include "assignment2/apriltag_detect.h"
+
+
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf2_ros/transform_broadcaster.h>
+#include <tf2_ros/transform_listener.h>
+
+#include <control_msgs/PointHeadAction.h>
+#include <control_msgs/FollowJointTrajectoryAction.h>
+
+
+#include <ros/ros.h>
+
+#include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/TransformStamped.h>
+
 
 #include <apriltag_ros/AprilTagDetectionArray.h>
 
@@ -22,9 +53,14 @@
 
 #include "assignment2/apriltag_detect.h"
 
-/*
- * CONSTANTS
-*/
+#include <actionlib/client/simple_action_client.h>
+
+#include <map>
+
+#include "assignment2/apriltag_detect.h"
+
+//after how many iterations to send the positions
+int NUM_ITER_SEND = 10;
 std::set<int> prism { 1, 2, 3};
 std::set<int> cube { 4, 5, 6};
 std::set<int> triangle { 7, 8, 9};
@@ -41,17 +77,126 @@ float TABLE_1_Y = -1.96;
 float TABLE_2_X = 7.82;
 float TABLE_2_Y = -3.01;
 
+struct aprilmean{
+    float x;
+    float y;
+    float z;
+    int id;
+    float yaw;
+};
+
+std::map<int,aprilmean> apriltags_detected;
+
+void detectionCallback(const apriltag_ros::AprilTagDetectionArrayConstPtr& msg){
+    //we need the position in respect to the map
+    std::string target_frame = "map";
+    std::string source_frame = msg->header.frame_id;
+
+    tf2_ros::Buffer tfBuffer;
+    tf2_ros::TransformListener tfListener(tfBuffer);
+
+    while(!tfBuffer.canTransform(target_frame, source_frame, ros::Time(0)))
+        ros::Duration(0.001).sleep();
+
+    geometry_msgs::TransformStamped transformed = tfBuffer.lookupTransform(target_frame, source_frame, ros::Time(0), ros::Duration(1.0));
+
+    geometry_msgs::PoseStamped pos_in;
+
+    for(int i = 0; i < msg->detections.size(); ++i){
+        geometry_msgs::PoseStamped pos_out;
+        pos_in.header.frame_id = msg->detections.at(i).pose.header.frame_id;
+        pos_in.pose.position.x = msg->detections.at(i).pose.pose.pose.position.x;
+        pos_in.pose.position.y = msg->detections.at(i).pose.pose.pose.position.y;
+        pos_in.pose.position.z = msg->detections.at(i).pose.pose.pose.position.z;
+        pos_in.pose.orientation.x = msg->detections.at(i).pose.pose.pose.orientation.x;
+        pos_in.pose.orientation.y = msg->detections.at(i).pose.pose.pose.orientation.y;
+        pos_in.pose.orientation.z = msg->detections.at(i).pose.pose.pose.orientation.z;
+        pos_in.pose.orientation.w = msg->detections.at(i).pose.pose.pose.orientation.w;
+
+        tf2::doTransform(pos_in, pos_out, transformed);
+
+        //insert the detection in the global vector
+        double roll, pitch, yaw;
+        aprilmean tmp;
+        tmp.x = pos_out.pose.position.x;
+        tmp.y = pos_out.pose.position.y;
+        tmp.z = pos_out.pose.position.z;
+        tmp.id = msg->detections.at(i).id[0];
+        tf2::Quaternion quat;
+        tf2::convert(pos_out.pose.orientation, quat);
+        tf2::Matrix3x3(quat).getRPY(roll, pitch, yaw);
+        tmp.yaw = yaw;
+        apriltags_detected[tmp.id] = (tmp);
+    }
+}
+//function to move the head down in order to see the apriltags
+void lookDown() {
+    actionlib::SimpleActionClient<control_msgs::PointHeadAction> client("/head_controller/point_head_action", true);
+
+    ROS_INFO("Waiting for the action server to start...");
+    client.waitForServer(); 
+    ROS_INFO("Action server started, sending goal.");
+
+    control_msgs::PointHeadGoal goal;
+
+    //initialize the position the head must look at
+    geometry_msgs::PointStamped target_point;
+    target_point.header.frame_id = "base_link"; 
+    target_point.header.stamp = ros::Time::now();
+    target_point.point.x = 2.0; 
+    target_point.point.y = 0.0; 
+    target_point.point.z = 0.0;
+
+    goal.target = target_point;
+
+    goal.pointing_frame = "head_2_link";
+    goal.pointing_axis.x = 1.0;      
+    goal.pointing_axis.y = 0.0;
+    goal.pointing_axis.z = 0.0;
+
+    goal.min_duration = ros::Duration(0.5); 
+    goal.max_velocity = 1.0;               
+
+    client.sendGoal(goal);
+
+    bool finished_before_timeout = client.waitForResult(ros::Duration(20.0));
+
+    if (finished_before_timeout) {
+        ROS_INFO("Head movement succeeded.");
+    } else {
+        ROS_ERROR("Head movement did not finish before the timeout");
+    }
+}
+void move_torso(){
+    // Create client the torso_controller
+    actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> torsoClient("/torso_controller/follow_joint_trajectory", true);
+    ROS_INFO("waiting for torso server");
+    torsoClient.waitForServer();
+
+    // Set joint values
+    control_msgs::FollowJointTrajectoryGoal goal;
+    goal.trajectory.joint_names.push_back("torso_lift_joint");
+    trajectory_msgs::JointTrajectoryPoint point;
+    point.positions.push_back(1.0);
+    point.time_from_start = ros::Duration(1.0);
+    goal.trajectory.points.push_back(point);
+
+    // Send goal and check the result
+    torsoClient.sendGoal(goal);
+    if (torsoClient.waitForResult()) {
+        //ros::Duration(DELAY).sleep();
+        ROS_INFO("The torso moved successfully.");
+    }
+    else
+        ROS_ERROR("An error occurred while moving the torso.");
+}
+
 /*
  * the following code is separated from the detector as if
  * they were in the same node the service wouldn't respond
  * 
 */
 
-std::vector<int> ids;
-std::vector<float> x;
-std::vector<float> y;
-std::vector<float> z;
-std::vector<float> yaw;
 
 void add_tables(){
     std::vector<moveit_msgs::CollisionObject> collision_objects;
@@ -110,12 +255,12 @@ void add_collision_objects(){
 
     // Add the collision object to the planning scene
     std::vector<moveit_msgs::CollisionObject> collision_objects;
-    for(int i=0; i < ids.size(); i++){
-        int id_ = ids[i];
-        float x_ = x[i];
-        float y_ = y[i];
-        float z_ = z[i];
-        float yaw_ = yaw[i];
+    for(auto tag : apriltags_detected){
+        int id_ = tag.second.id;
+        float x_ = tag.second.x;
+        float y_ = tag.second.y;
+        float z_ = tag.second.z;
+        float yaw_ = tag.second.yaw;
         float height, width, length;
         moveit_msgs::CollisionObject collision_object;
         collision_object.operation = collision_object.ADD;
@@ -171,19 +316,16 @@ void add_collision_objects(){
 
 bool get_apriltags(assignment2::apriltag_detect::Request &req, assignment2::apriltag_detect::Response &res){
     //the program saves the apriltags received from the detector
-    if(!req.ids.empty()){
-        ids=req.ids;
-        x=req.x;
-        y=req.y;
-        z=req.z;
-        yaw=req.yaw;
+    ros::NodeHandle nh;
+    const apriltag_ros::AprilTagDetectionArray::ConstPtr msg = ros::topic::waitForMessage<apriltag_ros::AprilTagDetectionArray>("tag_detections", nh);
+    detectionCallback(msg);
+    for(auto el : apriltags_detected){
+        res.ids.push_back(el.second.id);
+        res.x.push_back(el.second.x);
+        res.y.push_back(el.second.y);
+        res.z.push_back(el.second.z);
+        res.yaw.push_back(el.second.yaw);
     }
-    //return the apriltags read up to now
-    res.ids = ids;
-    res.x = x;
-    res.y = y;
-    res.z = x;
-    res.yaw = yaw;
     if(req.create_collisions){
         add_collision_objects();
     }
@@ -191,13 +333,18 @@ bool get_apriltags(assignment2::apriltag_detect::Request &req, assignment2::apri
 }
 
 
-int main(int argc, char** argv){
-    ros::init(argc, argv, "locate_apriltag_service");
+
+int main(int argc, char** argv)
+{
+    ros::init(argc, argv, "locate_apriltag");
     ros::NodeHandle nh;
+    lookDown();
+    move_torso();
     ROS_INFO_STREAM("locate_apriltag");
 
     ros::Subscriber tag_subscriber;
 
+    //tag_subscriber = nh.subscribe("tag_detections", 10, detectionCallback);
     ros::ServiceServer service = nh.advertiseService("apriltags_detected_service", get_apriltags);
     ROS_INFO_STREAM("locate_apriltag");
     ros::spin(); 
