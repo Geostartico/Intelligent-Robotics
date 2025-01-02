@@ -1,6 +1,7 @@
 #include <ros/ros.h>
 #include <tiago_iaslab_simulation/Coeffs.h>
 #include "assignment2/object_detect.h"
+#include "movement.h"
 
 int main(int argc, char **argv) {
     ros::init(argc, argv, "node_A");
@@ -26,26 +27,40 @@ int main(int argc, char **argv) {
 
     // Placing Routine
 
-    ros::ServiceClient detection_client = n.serviceClient<assignment2::object_detect>("/detection_srv");
-    assignment2::object_detect srv_d;
-    srv_d.request.m = coeffs[0];
-    srv_d.request.q = coeffs[1];
-    srv_d.request.ready = true;
+    // ros::ServiceClient detection_client = n.serviceClient<assignment2::object_detect>("/detection_srv");
+    // assignment2::object_detect srv_d;
+    // srv_d.request.ready = true;
 
-    // Request to start the detection routine and get the object position and preferred docking stations
-    std::vector<float> objs_x, objs_y, docks_x, docks_y;
-    std::vector<int> ids;
-    if(detection_client.call(srv_d)) {
-        ROS_INFO("detection_srv call successful.");
-        objs_x = srv_d.response.objs_x;
-        objs_y = srv_d.response.objs_y;
-        docks_x = srv_d.response.docks_x;
-        docks_y = srv_d.response.docks_y;
-        ids = srv_d.response.ids;
+    // // Request to start the detection routine and get the object position and preferred docking stations
+    // std::vector<float> objs_x, objs_y;
+    // std::vector<int> ids;
+    // if(detection_client.call(srv_d)) {
+    //     ROS_INFO("detection_srv call successful.");
+    //     objs_x = srv_d.response.objs_x;
+    //     objs_y = srv_d.response.objs_y;
+    //     ids = srv_d.response.ids;
+    // }
+    // else {
+    //     ROS_ERROR("Failed to call service detection_srv.");
+    //     return 1;
+    // }
+
+    ros::Duration wait_time(2.0);
+
+    ROS_INFO("Initializing Movement object. Robot takes position at dock 1.");
+    Movement mov;
+    wait_time.sleep();
+
+    for(int i=2; i<=6; i++) {
+        ROS_INFO("Moving to dock %u.", i);
+        mov.goAround(i);
+        wait_time.sleep();
     }
-    else {
-        ROS_ERROR("Failed to call service detection_srv.");
-        return 1;
+
+    for(int i=5; i>=1; i--) {
+        ROS_INFO("Moving to dock %u.", i);
+        mov.goAround(i);
+        wait_time.sleep();
     }
 
     return 0;

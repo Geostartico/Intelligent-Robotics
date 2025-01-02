@@ -312,7 +312,7 @@ bool detection_routine(assignment2::object_detect::Request &req, assignment2::ob
     for(auto p : corns)
         ROS_INFO("x=%f y=%f", p.first, p.second);
 
-    std::vector<float> objs_x, objs_y, docks_x, docks_y;
+    std::vector<float> objs_x, objs_y;
     std::vector<int> ids;
 
     sendGoalToMoveBase(docks[1].first, docks[1].second, NEG_Y_ORIENTATION);
@@ -375,9 +375,9 @@ bool detection_routine(assignment2::object_detect::Request &req, assignment2::ob
 
     int put_objs = 0;
 
-    put_down_routine(dock4, 4, table_tag, put_objs, req.m, req.q);
-    put_down_routine(dock5, 5, table_tag, put_objs, req.m, req.q);
-    put_down_routine(dock6, 6, table_tag, put_objs, req.m, req.q);
+    // put_down_routine(dock4, 4, table_tag, put_objs, req.m, req.q);
+    // put_down_routine(dock5, 5, table_tag, put_objs, req.m, req.q);
+    // put_down_routine(dock6, 6, table_tag, put_objs, req.m, req.q);
 
     //// Intermediate point
     //sendGoalToMoveBase(docks[0].first, 0.0, NEG_Y_ORIENTATION);
@@ -404,8 +404,6 @@ bool detection_routine(assignment2::object_detect::Request &req, assignment2::ob
 
     res.objs_x = objs_x;
     res.objs_y = objs_y;
-    res.docks_x = docks_x;
-    res.docks_y = docks_y;
     res.ids = ids;
 
     return true;

@@ -1,9 +1,5 @@
 bool ready
-float32 m
-float32 q
 ---
 float32[] objs_x
 float32[] objs_y
 int32[]   ids
-float32[] docks_x
-float32[] docks_y
