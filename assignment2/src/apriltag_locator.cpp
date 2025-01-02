@@ -59,7 +59,7 @@ void detectionCallback(const apriltag_ros::AprilTagDetectionArrayConstPtr& msg){
     tf2_ros::TransformListener tfListener(tfBuffer);
 
     while(!tfBuffer.canTransform(target_frame, source_frame, ros::Time(0)))
-        ros::Duration(0.05).sleep();
+        ros::Duration(0.001).sleep();
 
     geometry_msgs::TransformStamped transformed = tfBuffer.lookupTransform(target_frame, source_frame, ros::Time(0), ros::Duration(1.0));
 
@@ -79,10 +79,16 @@ void detectionCallback(const apriltag_ros::AprilTagDetectionArrayConstPtr& msg){
         tf2::doTransform(pos_in, pos_out, transformed);
 
         //insert the detection in the global vector
+        double roll, pitch, yaw;
         if(apriltags_detected.find((int)(msg->detections.at(i).id[0])) == apriltags_detected.end()){
             aprilmean tmp;
             tmp.x = pos_out.pose.position.x;
             tmp.y = pos_out.pose.position.y;
+            tmp.z = pos_out.pose.position.z;
+            tf2::Quaternion quat;
+            tf2::convert(pos_out.pose.orientation, quat);
+            tf2::Matrix3x3(quat).getRPY(roll, pitch, yaw);
+            tmp.yaw = yaw;
             tmp.counter = 1;
             apriltags_detected[msg->detections.at(i).id[0]] = tmp;
         }
@@ -90,7 +96,10 @@ void detectionCallback(const apriltag_ros::AprilTagDetectionArrayConstPtr& msg){
             apriltags_detected.at(msg->detections.at(i).id[0]).x += pos_out.pose.position.x;
             apriltags_detected.at(msg->detections.at(i).id[0]).y += pos_out.pose.position.y;
             apriltags_detected.at(msg->detections.at(i).id[0]).z += pos_out.pose.position.z;
-            apriltags_detected.at(msg->detections.at(i).id[0]).yaw += pos_out.pose.orientation.w;
+            tf2::Quaternion quat;
+            tf2::convert(pos_out.pose.orientation, quat);
+            tf2::Matrix3x3(quat).getRPY(roll, pitch, yaw);
+            apriltags_detected.at(msg->detections.at(i).id[0]).yaw += yaw;
             apriltags_detected.at(msg->detections.at(i).id[0]).counter++;
         }
 
@@ -116,7 +125,7 @@ void lookDown() {
     geometry_msgs::PointStamped target_point;
     target_point.header.frame_id = "base_link"; 
     target_point.header.stamp = ros::Time::now();
-    target_point.point.x = 1.0; 
+    target_point.point.x = 2.0; 
     target_point.point.y = 0.0; 
     target_point.point.z = 0.0;
 

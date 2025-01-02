@@ -156,7 +156,12 @@ void add_collision_objects(){
         box_pose.position.x = x_;
         box_pose.position.y = y_;
         box_pose.position.z = z_;
-        box_pose.orientation.w = yaw_;
+        tf2::Quaternion quaternion;
+        quaternion.setRPY(0, 0, yaw_);
+        box_pose.orientation.x = quaternion.x();
+        box_pose.orientation.y = quaternion.y();
+        box_pose.orientation.z = quaternion.z();
+        box_pose.orientation.w = quaternion.w();
         collision_object.primitives.push_back(primitive);
         collision_object.primitive_poses.push_back(box_pose);
         collision_objects.push_back(collision_object);

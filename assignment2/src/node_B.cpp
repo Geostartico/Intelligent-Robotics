@@ -308,12 +308,19 @@ bool detection_routine(assignment2::object_detect::Request &req, assignment2::ob
 
     sendGoalToMoveBase(docks[1].first, docks[1].second, NEG_Y_ORIENTATION);
     curpos=2;
+    ros::Duration wait_time(2.0);
     goAround(1);
+    wait_time.sleep();
     goAround(2);
+    wait_time.sleep();
     goAround(3);
+    wait_time.sleep();
     goAround(4);
+    wait_time.sleep();
     goAround(5);
+    wait_time.sleep();
     goAround(6);
+    wait_time.sleep();
     //
     // Client to receive the current status of the AprilTags Detection 
     ros::NodeHandle nh_;
@@ -359,8 +366,8 @@ bool detection_routine(assignment2::object_detect::Request &req, assignment2::ob
     int put_objs = 0;
 
     put_down_routine(dock4, 4, table_tag, put_objs, req.m, req.q);
-    put_down_routine(dock4, 5, table_tag, put_objs, req.m, req.q);
-    put_down_routine(dock4, 6, table_tag, put_objs, req.m, req.q);
+    put_down_routine(dock5, 5, table_tag, put_objs, req.m, req.q);
+    put_down_routine(dock6, 6, table_tag, put_objs, req.m, req.q);
 
     //// Intermediate point
     //sendGoalToMoveBase(docks[0].first, 0.0, NEG_Y_ORIENTATION);
