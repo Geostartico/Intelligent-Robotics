@@ -236,7 +236,16 @@ void put_down_routine(std::vector<apriltag_str> tags, int docked_pos, apriltag_s
             goal_pick.tgt_pose.position.x =  tag.x;
             goal_pick.tgt_pose.position.y =  tag.y;
             goal_pick.tgt_pose.position.z =  tag.z;
-            goal_pick.tgt_pose.orientation.w = tag.yaw; 
+
+            tf2::Quaternion tgt_yaw_qt;
+            tgt_yaw_qt.setRPY(0,0,tag.yaw);
+
+            goal_pick.tgt_pose.orientation.w = tgt_yaw_qt.w();
+            goal_pick.tgt_pose.orientation.x = tgt_yaw_qt.x();
+            goal_pick.tgt_pose.orientation.y = tgt_yaw_qt.y();
+            goal_pick.tgt_pose.orientation.z = tgt_yaw_qt.z();
+
+         
             ac.sendGoal(goal_pick);
             ac.waitForResult(ros::Duration(30.0));
             ROS_INFO("Movemente_Handler server started. Now looking for the closest waypoint.");

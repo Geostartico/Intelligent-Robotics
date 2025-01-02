@@ -47,7 +47,7 @@ class ArmMovementServer{
         void movementOnGoal(const assignment2::ObjectMoveGoal::ConstPtr &goal){
 
             moveit::planning_interface::MoveGroupInterface moveGroup("arm_torso");
-            moveGroup.setPoseReferenceFrame("base_footprint");
+            moveGroup.setPoseReferenceFrame("map");
             moveGroup.setPlanningTime(10.0);
             moveit::planning_interface::MoveGroupInterface::Plan plan;
             moveit::planning_interface::PlanningSceneInterface planningSceneInterface;   
@@ -206,7 +206,8 @@ class ArmMovementServer{
 
         void moveLinearTGT(moveit::planning_interface::MoveGroupInterface& moveGroup, moveit::planning_interface::MoveGroupInterface::Plan& plan, geometry_msgs::Pose& tgt){
             moveit_msgs::RobotTrajectory path;
-            float pathCartesian = moveGroup.computeCartesianPath(std::vector<geometry_msgs::Pose>{tgt}, 0.03, path);
+            //float pathCartesian = moveGroup.computeCartesianPath(std::vector<geometry_msgs::Pose>{tgt}, 0.03,path); //compiles on local/updated ROS versions
+            float pathCartesian = moveGroup.computeCartesianPath(std::vector<geometry_msgs::Pose>{tgt}, 0.03, 0,path); //compiles on vlab, deprecated.
             if (pathCartesian > 0){
                 ROS_INFO("Arm in cartesian movement");
                 plan.trajectory_=path;
