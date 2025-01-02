@@ -78,3 +78,7 @@ target_link_libraries(apriltag_locator ${catkin_LIBRARIES})
 add_executable(apriltag_locator_service src/apriltag_detect_service.cpp)
 add_dependencies(apriltag_locator_service assignment2_generate_messages_cpp)
 target_link_libraries(apriltag_locator_service ${catkin_LIBRARIES})
+
+add_executable(node_C_tester src/node_C_tester.cpp)
+add_dependencies(node_C_tester assignment2_generate_messages_cpp)
+target_link_libraries(node_C_tester ${catkin_LIBRARIES})
