@@ -362,6 +362,7 @@ bool detection_routine(assignment2::object_detect::Request &req, assignment2::ob
         ROS_ERROR("TABLE TAG NOT FOUND");
         return false;
     }
+    exit(0);
 
     int put_objs = 0;
 
