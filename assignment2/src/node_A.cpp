@@ -51,7 +51,7 @@ int main(int argc, char **argv) {
     ROS_INFO("Initializing Movement object. Robot takes position at dock 1.");
     Movement mov;
     wait_time.sleep();
-    ros::ServiceClient ad_client = nh_.serviceClient<assignment2::apriltag_detect>("apriltags_detected_service");
+    ros::ServiceClient ad_client = n.serviceClient<assignment2::apriltag_detect>("apriltags_detected_service");
     assignment2::apriltag_detect ad_srv;
 
     for(int i=2; i<=6; i++) {
