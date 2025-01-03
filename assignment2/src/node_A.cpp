@@ -1,6 +1,7 @@
 #include <ros/ros.h>
 #include <tiago_iaslab_simulation/Coeffs.h>
 #include "assignment2/object_detect.h"
+#include "assignment2/apriltag_detect.h"
 #include "movement.h"
 
 int main(int argc, char **argv) {
@@ -50,12 +51,16 @@ int main(int argc, char **argv) {
     ROS_INFO("Initializing Movement object. Robot takes position at dock 1.");
     Movement mov;
     wait_time.sleep();
+    ros::ServiceClient ad_client = nh_.serviceClient<assignment2::apriltag_detect>("apriltags_detected_service");
+    assignment2::apriltag_detect ad_srv;
 
     for(int i=2; i<=6; i++) {
         ROS_INFO("Moving to dock %u.", i);
         mov.goAround(i);
         wait_time.sleep();
     }
+    ad_srv.request.create_collisions = true;
+    ad_client.call(ad_srv);
 
     for(int i=5; i>=1; i--) {
         ROS_INFO("Moving to dock %u.", i);
