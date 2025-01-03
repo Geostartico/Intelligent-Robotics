@@ -34,6 +34,7 @@ private:
 public:
     Movement();
     void goAround(int target_pos);
+    float dock_dist(float x, float y, int dock);
 };
 
 #endif // MOVEMENT_H

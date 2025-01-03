@@ -58,13 +58,14 @@ void Movement::sendGoalToMoveBase(double x, double y, const geometry_msgs::Quate
     goal.target_pose.header.stamp = ros::Time::now();
     goal.target_pose.pose.position.x = x;
     goal.target_pose.pose.position.y = y;
+    goal.target_pose.pose.position.z = 0.0;
     goal.target_pose.pose.orientation = orientation;
 
     ROS_INFO("Sending goal: x=%.2f, y=%.2f, orientation=[%.2f, %.2f, %.2f, %.2f]",
              x, y, orientation.x, orientation.y, orientation.z, orientation.w);
 
     ac.sendGoal(goal);
-    if (ac.waitForResult(ros::Duration(10))) {
+    if (ac.waitForResult(ros::Duration(20))) {
         if (ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED) {
             ROS_INFO("Goal reached successfully!");
         } else {
@@ -78,6 +79,7 @@ void Movement::go_clockwise(int target_pos) {
     geometry_msgs::Quaternion escape_orientation;
     switch (cur_pos) {
         case 2: escape_orientation = POS_X_ORIENTATION; break;
+        case 5: escape_orientation = NEG_X_ORIENTATION; break;
         case 3: case 4: escape_orientation = NEG_Y_ORIENTATION; break;
         case 6: case 1: escape_orientation = POS_Y_ORIENTATION; break;
     }
@@ -138,6 +140,7 @@ void Movement::go_counter_clockwise(int target_pos) {
     geometry_msgs::Quaternion escape_orientation;
     switch (cur_pos) {
         case 2: escape_orientation = NEG_X_ORIENTATION; break;
+        case 5: escape_orientation = POS_X_ORIENTATION; break;
         case 3: case 4: escape_orientation = POS_Y_ORIENTATION; break;
         case 6: case 1: escape_orientation = NEG_Y_ORIENTATION; break;
     }
@@ -201,4 +204,16 @@ void Movement::goAround(int target_pos) {
         go_counter_clockwise(target_pos);
     else
         ROS_WARN("Robot is already in target position.");
+}
+
+float Movement::dock_dist(float x, float y, int dock) {
+    if(dock<1 || dock>6) {
+        ROS_ERROR("Given dock index is not valid.");
+        return -1.0;
+    }
+    float x1 = x;
+    float y1 = y;
+    float x2 = docks[dock-1].first;
+    float y2 = docks[dock-1].second;
+    return std::pow(x1 - x2, 2) + std::pow(y1 - y2, 2);
 }

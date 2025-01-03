@@ -1,8 +1,76 @@
 #include <ros/ros.h>
+#include <map>
+#include <tf2_ros/transform_listener.h>
 #include <tiago_iaslab_simulation/Coeffs.h>
 #include "assignment2/object_detect.h"
 #include "assignment2/apriltag_detect.h"
 #include "movement.h"
+#include "assignment2/ObjectMoveAction.h"
+
+struct apriltag_str{
+    float x;
+    float y;
+    float z;
+    float yaw;
+    int id;
+    int dock;
+};
+
+float X_STEP = 0.15;
+
+void put_down_routine(std::vector<apriltag_str> tags, apriltag_str table_tag, int& put_objs, float m, float q, Movement mov) {
+    for (const auto& tag:tags) {
+        mov.goAround(tag.dock);
+        actionlib::SimpleActionClient<assignment2::ObjectMoveAction> ac("move_object", true);
+        ROS_INFO("Waiting for Movemente_Handler server to start...");
+        ac.waitForServer();
+
+        assignment2::ObjectMoveGoal goal_pick;
+        goal_pick.pick = true;
+        goal_pick.tgt_id = tag.id;
+        goal_pick.tgt_pose.position.x =  tag.x;
+        goal_pick.tgt_pose.position.y =  tag.y;
+        goal_pick.tgt_pose.position.z =  tag.z;
+
+        tf2::Quaternion tgt_yaw_qt;
+        tgt_yaw_qt.setRPY(0,0,tag.yaw);
+
+        goal_pick.tgt_pose.orientation.w = tgt_yaw_qt.w();
+        goal_pick.tgt_pose.orientation.x = tgt_yaw_qt.x();
+        goal_pick.tgt_pose.orientation.y = tgt_yaw_qt.y();
+        goal_pick.tgt_pose.orientation.z = tgt_yaw_qt.z();
+
+        
+        ac.sendGoal(goal_pick);
+        ac.waitForResult(ros::Duration(30.0));
+        ROS_INFO("Movemente_Handler server started. Now looking for the closest waypoint.");
+        //pickupobject(cur_obj);
+
+        // CHECK THIS, IS THE SAME REF. FRAME ??
+        float put_down_x = table_tag.x + ((put_objs + 1) * X_STEP);
+        float put_down_y = table_tag.y + ((put_objs + 1) * X_STEP) * m + q;
+        float dist1 = mov.dock_dist(put_down_x, put_down_y, 1);
+        float dist2 = mov.dock_dist(put_down_x, put_down_y, 2);
+        float dist3 = mov.dock_dist(put_down_x, put_down_y, 3);
+        if(dist1 < dist2 && dist1 < dist3) 
+            mov.goAround(1);
+        else if(dist2 < dist3) 
+            mov.goAround(2);
+        else 
+            mov.goAround(3);
+
+        //put down
+        assignment2::ObjectMoveGoal goal_place;
+        goal_place.pick = false;
+        goal_place.tgt_id = tag.id;
+        goal_place.tgt_pose.position.x =  put_down_x;
+        goal_place.tgt_pose.position.y =  put_down_y;
+        goal_place.tgt_pose.position.z =  tag.z;
+        goal_place.tgt_pose.orientation.w = 0; 
+        ac.sendGoal(goal_place);
+        ac.waitForResult(ros::Duration(30.0));
+    }
+}
 
 int main(int argc, char **argv) {
     ros::init(argc, argv, "node_A");
@@ -26,26 +94,6 @@ int main(int argc, char **argv) {
 
     ROS_INFO("Line parameters, m:%f q:%f", coeffs[0], coeffs[1]);
 
-    // Placing Routine
-
-    // ros::ServiceClient detection_client = n.serviceClient<assignment2::object_detect>("/detection_srv");
-    // assignment2::object_detect srv_d;
-    // srv_d.request.ready = true;
-
-    // // Request to start the detection routine and get the object position and preferred docking stations
-    // std::vector<float> objs_x, objs_y;
-    // std::vector<int> ids;
-    // if(detection_client.call(srv_d)) {
-    //     ROS_INFO("detection_srv call successful.");
-    //     objs_x = srv_d.response.objs_x;
-    //     objs_y = srv_d.response.objs_y;
-    //     ids = srv_d.response.ids;
-    // }
-    // else {
-    //     ROS_ERROR("Failed to call service detection_srv.");
-    //     return 1;
-    // }
-
     ros::Duration wait_time(2.0);
 
     ROS_INFO("Initializing Movement object. Robot takes position at dock 1.");
@@ -54,19 +102,54 @@ int main(int argc, char **argv) {
     ros::ServiceClient ad_client = n.serviceClient<assignment2::apriltag_detect>("apriltags_detected_service");
     assignment2::apriltag_detect ad_srv;
 
-    for(int i=2; i<=6; i++) {
+    std::vector<apriltag_str> dock4, dock5, dock6;
+    std::map<int, apriltag_str> tags;
+    apriltag_str table_tag{0,0,0,0,-1,-1};
+
+    for(int i=3; i<=6; i++) {
         ROS_INFO("Moving to dock %u.", i);
         mov.goAround(i);
         wait_time.sleep();
+        if(ad_client.call(ad_srv)) {
+            ROS_INFO("Call to apriltags_detected_service: SUCCESSFUL.");
+            std::vector<int> ids = ad_srv.response.ids;
+            std::vector<float> x = ad_srv.response.x;
+            std::vector<float> y = ad_srv.response.y;
+            std::vector<float> z = ad_srv.response.z;
+            std::vector<float> yaw = ad_srv.response.yaw;
+            for(int j=0; j<ids.size(); j++) {
+                apriltag_str tmp{x[j], y[j], z[j], yaw[j], ids[j], i};
+                if(ids[j]==10){
+                    table_tag = tmp;
+                    continue;
+                }
+                auto it = tags.find(ids[j]);
+                if(it != tags.end()) {
+                    if(mov.dock_dist(x[j], y[j], i) < mov.dock_dist(it->second.x, it->second.y, it->second.dock)) {
+                        ROS_INFO("Updating AprilTag %u: from dock %u to dock %u", ids[j], it->second.dock, i);
+                        tags[ids[j]] = tmp;
+                    }
+                }
+                else {
+                    ROS_INFO("Adding new AprilTag %u at dock %u (x=%.2f, y=%.2f)", ids[j], i, x[j], y[j]);
+                    tags[ids[j]] = tmp;
+                }
+            }
+        }  
     }
     ad_srv.request.create_collisions = true;
     ad_client.call(ad_srv);
 
-    for(int i=5; i>=1; i--) {
-        ROS_INFO("Moving to dock %u.", i);
-        mov.goAround(i);
-        wait_time.sleep();
-    }
+    ROS_INFO("Object detection results:");
+    ROS_INFO("Table (AprilTag 10) found at x=%f y=%f from dock %u", table_tag.x, table_tag.y, table_tag.dock);
+    for(auto t : tags) 
+        ROS_INFO("AprilTag %u detected at x=%f y=%f from dock %u", t.second.id, t.second.x, t.second.y, t.second.dock);
+
+    // for(int i=5; i>=1; i--) {
+    //     ROS_INFO("Moving to dock %u.", i);
+    //     mov.goAround(i);
+    //     wait_time.sleep();
+    // }
 
     return 0;
 }
