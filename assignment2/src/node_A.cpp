@@ -86,7 +86,7 @@ void put_down_routine(std::vector<apriltag_str> tags, apriltag_str table_tag, in
         goal_place.tgt_pose.orientation.w = 0; 
         ROS_INFO("Sending goal to move_object server.");
         ac.sendGoal(goal_place);
-        finished_before_timeout = ac.waitForResult(ros::Duration(30.0));
+        finished_before_timeout = ac.waitForResult(ros::Duration(45.0));
         if (finished_before_timeout) {
             actionlib::SimpleClientGoalState state = ac.getState();
             if (state == actionlib::SimpleClientGoalState::SUCCEEDED) {
@@ -95,6 +95,8 @@ void put_down_routine(std::vector<apriltag_str> tags, apriltag_str table_tag, in
                 ROS_WARN("Action did not succeed. State: %s", state.toString().c_str());
             }
         }
+        else
+            ROS_WARN("Action did not finish before timeout.");
 	    put_objs++;
     }
 }
@@ -127,7 +129,6 @@ int main(int argc, char **argv) {
     Movement mov;
     wait_time.sleep();
     ros::ServiceClient ad_client = n.serviceClient<assignment2::apriltag_detect>("apriltags_detected_service");
-    assignment2::apriltag_detect ad_srv;
 
     std::vector<apriltag_str> dock4, dock5, dock6;
     std::map<int, apriltag_str> tags;
@@ -137,6 +138,7 @@ int main(int argc, char **argv) {
         ROS_INFO("Moving to dock %u.", i);
         mov.goAround(i);
         wait_time.sleep();
+        assignment2::apriltag_detect ad_srv;
         if(ad_client.call(ad_srv)) {
             ROS_INFO("Call to apriltags_detected_service: SUCCESSFUL.");
             std::vector<int> ids = ad_srv.response.ids;
@@ -185,6 +187,7 @@ int main(int argc, char **argv) {
 	    else if(tag.second.dock==6)
 		    dock6.push_back(tag.second);
     }
+    assignment2::apriltag_detect ad_srv;
     ad_srv.request.create_collisions = true;
     ROS_INFO("Creating collision objects from detections.");
     if(ad_client.call(ad_srv))
