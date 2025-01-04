@@ -85,52 +85,62 @@ void Movement::go_clockwise(int target_pos) {
     }
     sendGoalToMoveBase(docks[cur_pos - 1].first, docks[cur_pos - 1].second, escape_orientation);
 
-    if(cur_pos==1 && target_pos>cur_pos) {
-        sendGoalToMoveBase(corns[0].first, corns[0].second, POS_Y_ORIENTATION);
-        sendGoalToMoveBase(corns[0].first, corns[0].second, POS_X_ORIENTATION);
-        cur_pos++;
-        sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, POS_X_ORIENTATION);
-        if(target_pos==2){
-            sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_Y_ORIENTATION);
-            return;
-        }
-    }
-    if(cur_pos==2 && target_pos>cur_pos) {
-        sendGoalToMoveBase(corns[1].first, corns[1].second, POS_X_ORIENTATION);
-        sendGoalToMoveBase(corns[1].first, corns[1].second, NEG_Y_ORIENTATION);
-        cur_pos++;
-        sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_Y_ORIENTATION);
-        if(target_pos==3){
-            sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_X_ORIENTATION);
-            return;
-        }
-    }
-    if(cur_pos==3 && target_pos>cur_pos) {
-        cur_pos++;
-        sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_Y_ORIENTATION);
-        if(target_pos==4){
-            sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_X_ORIENTATION);
-            return;
-        }
-    }
-    if(cur_pos==4 && target_pos>cur_pos) {
-        sendGoalToMoveBase(corns[2].first, corns[2].second, NEG_Y_ORIENTATION);
-        sendGoalToMoveBase(corns[2].first, corns[2].second, NEG_X_ORIENTATION);
-        cur_pos++;
-        sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_X_ORIENTATION);
-        if(target_pos==5){
+    while(cur_pos != target_pos) {
+        if(cur_pos==6 && target_pos<cur_pos) {
+            cur_pos=1;
             sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, POS_Y_ORIENTATION);
-            return;
+            if(target_pos==1){
+                sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, POS_X_ORIENTATION);
+                return;
+            }
         }
-    }
-    if(cur_pos==5 && target_pos>cur_pos) {
-        sendGoalToMoveBase(corns[3].first, corns[3].second, NEG_X_ORIENTATION);
-        sendGoalToMoveBase(corns[3].first, corns[3].second, POS_Y_ORIENTATION);
-        cur_pos++;
-        sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, POS_Y_ORIENTATION);
-        if(target_pos==6){
+        if(cur_pos==1 && target_pos>cur_pos) {
+            sendGoalToMoveBase(corns[0].first, corns[0].second, POS_Y_ORIENTATION);
+            sendGoalToMoveBase(corns[0].first, corns[0].second, POS_X_ORIENTATION);
+            cur_pos++;
             sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, POS_X_ORIENTATION);
-            return;
+            if(target_pos==2){
+                sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_Y_ORIENTATION);
+                return;
+            }
+        }
+        if(cur_pos==2 && target_pos>cur_pos) {
+            sendGoalToMoveBase(corns[1].first, corns[1].second, POS_X_ORIENTATION);
+            sendGoalToMoveBase(corns[1].first, corns[1].second, NEG_Y_ORIENTATION);
+            cur_pos++;
+            sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_Y_ORIENTATION);
+            if(target_pos==3){
+                sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_X_ORIENTATION);
+                return;
+            }
+        }
+        if(cur_pos==3 && target_pos>cur_pos) {
+            cur_pos++;
+            sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_Y_ORIENTATION);
+            if(target_pos==4){
+                sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_X_ORIENTATION);
+                return;
+            }
+        }
+        if(cur_pos==4 && target_pos>cur_pos) {
+            sendGoalToMoveBase(corns[2].first, corns[2].second, NEG_Y_ORIENTATION);
+            sendGoalToMoveBase(corns[2].first, corns[2].second, NEG_X_ORIENTATION);
+            cur_pos++;
+            sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_X_ORIENTATION);
+            if(target_pos==5){
+                sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, POS_Y_ORIENTATION);
+                return;
+            }
+        }
+        if(cur_pos==5 && target_pos>cur_pos) {
+            sendGoalToMoveBase(corns[3].first, corns[3].second, NEG_X_ORIENTATION);
+            sendGoalToMoveBase(corns[3].first, corns[3].second, POS_Y_ORIENTATION);
+            cur_pos++;
+            sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, POS_Y_ORIENTATION);
+            if(target_pos==6){
+                sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, POS_X_ORIENTATION);
+                return;
+            }
         }
     }
 }
@@ -146,64 +156,82 @@ void Movement::go_counter_clockwise(int target_pos) {
     }
     sendGoalToMoveBase(docks[cur_pos - 1].first, docks[cur_pos - 1].second, escape_orientation);
 
-    if(cur_pos==6 && target_pos<cur_pos) {
-        sendGoalToMoveBase(corns[3].first, corns[3].second, NEG_Y_ORIENTATION);
-        sendGoalToMoveBase(corns[3].first, corns[3].second, POS_X_ORIENTATION);
-        cur_pos--;
-        sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, POS_X_ORIENTATION);
-        if(target_pos==5){
-            sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, POS_Y_ORIENTATION);
-            return;
-        }
-    }
-    if(cur_pos==5 && target_pos<cur_pos) {
-        sendGoalToMoveBase(corns[2].first, corns[2].second, POS_X_ORIENTATION);
-        sendGoalToMoveBase(corns[2].first, corns[2].second, POS_Y_ORIENTATION);
-        cur_pos--;
-        sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, POS_Y_ORIENTATION);
-        if(target_pos==4){
-            sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_X_ORIENTATION);
-            return;
-        }
-    }
-    if(cur_pos==4 && target_pos<cur_pos) {
-        cur_pos--;
-        sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, POS_Y_ORIENTATION);
-        if(target_pos==3){
-            sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_X_ORIENTATION);
-            return;
-        }
-    }
-    if(cur_pos==3 && target_pos<cur_pos) {
-        sendGoalToMoveBase(corns[1].first, corns[1].second, POS_Y_ORIENTATION);
-        sendGoalToMoveBase(corns[1].first, corns[1].second, NEG_X_ORIENTATION);
-        cur_pos--;
-        sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_Y_ORIENTATION);
-        if(target_pos==2){
+    while(cur_pos != target_pos) {
+        if(cur_pos==1 & target_pos>cur_pos) {
+            cur_pos=6
             sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_Y_ORIENTATION);
-            return;
+            if(target_pos==6){
+                sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, POS_X_ORIENTATION);
+                return;
+            }
         }
-    }
-    if(cur_pos==2 && target_pos<cur_pos) {
-        sendGoalToMoveBase(corns[0].first, corns[0].second, NEG_X_ORIENTATION);
-        sendGoalToMoveBase(corns[0].first, corns[0].second, NEG_Y_ORIENTATION);
-        cur_pos--;
-        sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_Y_ORIENTATION);
-        if(target_pos==1){
+        if(cur_pos==6 && target_pos<cur_pos) {
+            sendGoalToMoveBase(corns[3].first, corns[3].second, NEG_Y_ORIENTATION);
+            sendGoalToMoveBase(corns[3].first, corns[3].second, POS_X_ORIENTATION);
+            cur_pos--;
             sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, POS_X_ORIENTATION);
-            return;
+            if(target_pos==5){
+                sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, POS_Y_ORIENTATION);
+                return;
+            }
+        }
+        if(cur_pos==5 && target_pos<cur_pos) {
+            sendGoalToMoveBase(corns[2].first, corns[2].second, POS_X_ORIENTATION);
+            sendGoalToMoveBase(corns[2].first, corns[2].second, POS_Y_ORIENTATION);
+            cur_pos--;
+            sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, POS_Y_ORIENTATION);
+            if(target_pos==4){
+                sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_X_ORIENTATION);
+                return;
+            }
+        }
+        if(cur_pos==4 && target_pos<cur_pos) {
+            cur_pos--;
+            sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, POS_Y_ORIENTATION);
+            if(target_pos==3){
+                sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_X_ORIENTATION);
+                return;
+            }
+        }
+        if(cur_pos==3 && target_pos<cur_pos) {
+            sendGoalToMoveBase(corns[1].first, corns[1].second, POS_Y_ORIENTATION);
+            sendGoalToMoveBase(corns[1].first, corns[1].second, NEG_X_ORIENTATION);
+            cur_pos--;
+            sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_Y_ORIENTATION);
+            if(target_pos==2){
+                sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_Y_ORIENTATION);
+                return;
+            }
+        }
+        if(cur_pos==2 && target_pos<cur_pos) {
+            sendGoalToMoveBase(corns[0].first, corns[0].second, NEG_X_ORIENTATION);
+            sendGoalToMoveBase(corns[0].first, corns[0].second, NEG_Y_ORIENTATION);
+            cur_pos--;
+            sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_Y_ORIENTATION);
+            if(target_pos==1){
+                sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, POS_X_ORIENTATION);
+                return;
+            }
         }
     }
 }
 
 // Navigate to target position
 void Movement::goAround(int target_pos) {
-    if (target_pos > cur_pos)
-        go_clockwise(target_pos);
-    else if (target_pos < cur_pos)
-        go_counter_clockwise(target_pos);
-    else
+    if (target_pos < 1 || target_pos > 6) {
+        ROS_ERROR("Invalid target position.");
+        return;
+    }
+    if (cur_pos == target_pos) {
         ROS_WARN("Robot is already in target position.");
+        return;
+    }
+    int clockwiseDistance = (target - start + 6) % 6;
+    int counterclockwiseDistance = (start - target + 6) % 6;
+    if (clockwiseDistance <= counterclockwiseDistance)
+        go_clockwise(target_pos);
+    else 
+        go_counter_clockwise(target_pos);
 }
 
 float Movement::dock_dist(float x, float y, int dock) {
