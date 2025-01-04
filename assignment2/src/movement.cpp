@@ -88,7 +88,7 @@ void Movement::go_clockwise(int target_pos) {
     sendGoalToMoveBase(docks[cur_pos - 1].first, docks[cur_pos - 1].second, escape_orientation);
 
     while(cur_pos != target_pos) {
-        if(cur_pos==6 && target_pos<cur_pos) {
+        if(cur_pos==6) {
             cur_pos=1;
             sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, POS_Y_ORIENTATION);
             if(target_pos==1){
@@ -96,7 +96,7 @@ void Movement::go_clockwise(int target_pos) {
                 return;
             }
         }
-        if(cur_pos==1 && target_pos>cur_pos) {
+        if(cur_pos==1) {
             sendGoalToMoveBase(corns[0].first, corns[0].second, POS_Y_ORIENTATION);
             sendGoalToMoveBase(corns[0].first, corns[0].second, POS_X_ORIENTATION);
             cur_pos++;
@@ -106,7 +106,7 @@ void Movement::go_clockwise(int target_pos) {
                 return;
             }
         }
-        if(cur_pos==2 && target_pos>cur_pos) {
+        if(cur_pos==2) {
             sendGoalToMoveBase(corns[1].first, corns[1].second, POS_X_ORIENTATION);
             sendGoalToMoveBase(corns[1].first, corns[1].second, NEG_Y_ORIENTATION);
             cur_pos++;
@@ -116,7 +116,7 @@ void Movement::go_clockwise(int target_pos) {
                 return;
             }
         }
-        if(cur_pos==3 && target_pos>cur_pos) {
+        if(cur_pos==3) {
             cur_pos++;
             sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_Y_ORIENTATION);
             if(target_pos==4){
@@ -124,7 +124,7 @@ void Movement::go_clockwise(int target_pos) {
                 return;
             }
         }
-        if(cur_pos==4 && target_pos>cur_pos) {
+        if(cur_pos==4) {
             sendGoalToMoveBase(corns[2].first, corns[2].second, NEG_Y_ORIENTATION);
             sendGoalToMoveBase(corns[2].first, corns[2].second, NEG_X_ORIENTATION);
             cur_pos++;
@@ -134,7 +134,7 @@ void Movement::go_clockwise(int target_pos) {
                 return;
             }
         }
-        if(cur_pos==5 && target_pos>cur_pos) {
+        if(cur_pos==5) {
             sendGoalToMoveBase(corns[3].first, corns[3].second, NEG_X_ORIENTATION);
             sendGoalToMoveBase(corns[3].first, corns[3].second, POS_Y_ORIENTATION);
             cur_pos++;
@@ -159,7 +159,7 @@ void Movement::go_counter_clockwise(int target_pos) {
     sendGoalToMoveBase(docks[cur_pos - 1].first, docks[cur_pos - 1].second, escape_orientation);
 
     while(cur_pos != target_pos) {
-        if(cur_pos==1 & target_pos>cur_pos) {
+        if(cur_pos==1) {
             cur_pos=6;
             sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_Y_ORIENTATION);
             if(target_pos==6){
@@ -167,7 +167,7 @@ void Movement::go_counter_clockwise(int target_pos) {
                 return;
             }
         }
-        if(cur_pos==6 && target_pos<cur_pos) {
+        if(cur_pos==6) {
             sendGoalToMoveBase(corns[3].first, corns[3].second, NEG_Y_ORIENTATION);
             sendGoalToMoveBase(corns[3].first, corns[3].second, POS_X_ORIENTATION);
             cur_pos--;
@@ -177,7 +177,7 @@ void Movement::go_counter_clockwise(int target_pos) {
                 return;
             }
         }
-        if(cur_pos==5 && target_pos<cur_pos) {
+        if(cur_pos==5) {
             sendGoalToMoveBase(corns[2].first, corns[2].second, POS_X_ORIENTATION);
             sendGoalToMoveBase(corns[2].first, corns[2].second, POS_Y_ORIENTATION);
             cur_pos--;
@@ -187,7 +187,7 @@ void Movement::go_counter_clockwise(int target_pos) {
                 return;
             }
         }
-        if(cur_pos==4 && target_pos<cur_pos) {
+        if(cur_pos==4) {
             cur_pos--;
             sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, POS_Y_ORIENTATION);
             if(target_pos==3){
@@ -195,7 +195,7 @@ void Movement::go_counter_clockwise(int target_pos) {
                 return;
             }
         }
-        if(cur_pos==3 && target_pos<cur_pos) {
+        if(cur_pos==3) {
             sendGoalToMoveBase(corns[1].first, corns[1].second, POS_Y_ORIENTATION);
             sendGoalToMoveBase(corns[1].first, corns[1].second, NEG_X_ORIENTATION);
             cur_pos--;
@@ -205,7 +205,7 @@ void Movement::go_counter_clockwise(int target_pos) {
                 return;
             }
         }
-        if(cur_pos==2 && target_pos<cur_pos) {
+        if(cur_pos==2) {
             sendGoalToMoveBase(corns[0].first, corns[0].second, NEG_X_ORIENTATION);
             sendGoalToMoveBase(corns[0].first, corns[0].second, NEG_Y_ORIENTATION);
             cur_pos--;
