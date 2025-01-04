@@ -98,7 +98,7 @@ int main(int argc, char **argv) {
 
     ros::Duration wait_time(2.0);
 
-    ROS_INFO("Initializing Movement object. Robot takes position at dock 1.");
+    ROS_INFO("Initializing Movement object. Robot takes position at dock 2.");
     Movement mov;
     wait_time.sleep();
     ros::ServiceClient ad_client = n.serviceClient<assignment2::apriltag_detect>("apriltags_detected_service");
@@ -143,14 +143,15 @@ int main(int argc, char **argv) {
 	    if(tag.second.dock==4)
 		    dock4.push_back(tag.second);
 	    else if(tag.second.dock==5)
-		    dock4.push_back(tag.second);
+		    dock5.push_back(tag.second);
 	    else if(tag.second.dock==6)
-		    dock4.push_back(tag.second);
+		    dock6.push_back(tag.second);
     }
-    int put_objs;
-    put_down_routine(dock4, table_tag, put_objs, coeffs[0], coeffs[1], mov);
     ad_srv.request.create_collisions = true;
     ad_client.call(ad_srv);
+
+    int put_objs = 0;
+    put_down_routine(dock4, table_tag, put_objs, coeffs[0], coeffs[1], mov);
 
     ROS_INFO("Object detection results:");
     ROS_INFO("Table (AprilTag 10) found at x=%f y=%f from dock %u", table_tag.x, table_tag.y, table_tag.dock);
