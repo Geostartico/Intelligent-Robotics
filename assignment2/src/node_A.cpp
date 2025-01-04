@@ -5,6 +5,8 @@
 #include "assignment2/object_detect.h"
 #include "assignment2/apriltag_detect.h"
 #include "movement.h"
+#include <actionlib/client/simple_action_client.h>
+#include <actionlib/client/terminal_state.h>
 #include "assignment2/ObjectMoveAction.h"
 
 struct apriltag_str{
@@ -20,11 +22,13 @@ float X_STEP = 0.15;
 
 void put_down_routine(std::vector<apriltag_str> tags, apriltag_str table_tag, int& put_objs, float m, float q, Movement& mov) {
     for (const auto& tag:tags) {
-	ROS_INFO("moving to: %d", tag.dock);
-        mov.goAround(tag.dock);
         actionlib::SimpleActionClient<assignment2::ObjectMoveAction> ac("move_object", true);
-        ROS_INFO("Waiting for Movemente_Handler server to start...");
+        ROS_INFO("Waiting for move_object server to start.");
         ac.waitForServer();
+
+        // PICK UP
+        ROS_INFO("Picking up object with AprilTag %u at x=%f y=%f from dock %u.", tag.id, tag.x, tag.y, tag.dock);
+        mov.goAround(tag.dock);
 
         assignment2::ObjectMoveGoal goal_pick;
         goal_pick.pick = true;
@@ -41,26 +45,35 @@ void put_down_routine(std::vector<apriltag_str> tags, apriltag_str table_tag, in
         goal_pick.tgt_pose.orientation.y = tgt_yaw_qt.y();
         goal_pick.tgt_pose.orientation.z = tgt_yaw_qt.z();
 
-        
+        ROS_INFO("Sending goal to move_object server.");
         ac.sendGoal(goal_pick);
-        ac.waitForResult(ros::Duration(30.0));
-        ROS_INFO("Movemente_Handler server started. Now looking for the closest waypoint.");
+        bool finished_before_timeout = ac.waitForResult(ros::Duration(30.0));
+        if (finished_before_timeout) {
+            actionlib::SimpleClientGoalState state = ac.getState();
+            if (state == actionlib::SimpleClientGoalState::SUCCEEDED) {
+                ROS_INFO("Action succeeded!");
+            } else {
+                ROS_WARN("Action did not succeed. State: %s", state.toString().c_str());
+            }
+        }
         //pickupobject(cur_obj);
 
-        // CHECK THIS, IS THE SAME REF. FRAME ??
         float put_down_y = table_tag.y + ((put_objs + 1) * X_STEP);
         float put_down_x = table_tag.x - ((put_objs + 1) * X_STEP) * m + q;
-        float dist1 = mov.dock_dist(put_down_x, put_down_y, 1);
-        float dist2 = mov.dock_dist(put_down_x, put_down_y, 2);
-        float dist3 = mov.dock_dist(put_down_x, put_down_y, 3);
-        if(dist1 < dist2 && dist1 < dist3) 
-            mov.goAround(1);
-        else if(dist2 < dist3) 
-            mov.goAround(2);
-        else 
-            mov.goAround(3);
 
-        //put down
+        float minDist = std::numeric_limits<float>::max(); 
+        int closestDock = -1;       
+        for (int dock = 1; dock <= 3; ++dock) {
+            float dist = mov.dock_dist(put_down_x, put_down_y, dock);
+            if (dist < minDist) {
+                minDist = dist;
+                closestDock = dock;
+            }
+        }
+        mov.goAround(closestDock);
+
+        //PLACE DOWN
+        ROS_INFO("Placing down object with AprilTag %u in x=%f y=%f from dock %u", tag.id, put_down_x, put_down_y, closestDock);
         assignment2::ObjectMoveGoal goal_place;
         goal_place.pick = false;
         goal_place.tgt_id = tag.id;
@@ -68,9 +81,18 @@ void put_down_routine(std::vector<apriltag_str> tags, apriltag_str table_tag, in
         goal_place.tgt_pose.position.y =  put_down_y;
         goal_place.tgt_pose.position.z =  tag.z;
         goal_place.tgt_pose.orientation.w = 0; 
+        ROS_INFO("Sending goal to move_object server.");
         ac.sendGoal(goal_place);
-        ac.waitForResult(ros::Duration(30.0));
-	put_objs++;
+        finished_before_timeout = ac.waitForResult(ros::Duration(30.0));
+        if (finished_before_timeout) {
+            actionlib::SimpleClientGoalState state = ac.getState();
+            if (state == actionlib::SimpleClientGoalState::SUCCEEDED) {
+                ROS_INFO("Action succeeded!");
+            } else {
+                ROS_WARN("Action did not succeed. State: %s", state.toString().c_str());
+            }
+        }
+	    put_objs++;
     }
 }
 
@@ -139,6 +161,12 @@ int main(int argc, char **argv) {
             }
         }  
     }
+
+    ROS_INFO("Object detection results:");
+    ROS_INFO("Table (AprilTag 10) found at x=%f y=%f from dock %u", table_tag.x, table_tag.y, table_tag.dock);
+    for(auto t : tags) 
+        ROS_INFO("AprilTag %u detected at x=%f y=%f from dock %u", t.second.id, t.second.x, t.second.y, t.second.dock);
+
     for(auto tag : tags){
 	    if(tag.second.dock==4)
 		    dock4.push_back(tag.second);
@@ -148,20 +176,19 @@ int main(int argc, char **argv) {
 		    dock6.push_back(tag.second);
     }
     ad_srv.request.create_collisions = true;
-    ad_client.call(ad_srv);
+    ROS_INFO("Creating collision objects from detections.");
+    if(ad_client.call(ad_srv))
+        ROS_INFO("Call to apriltags_detected_service: SUCCESSFUL.");
 
+    ROS_INFO("Starting the object placing routine.");
     int put_objs = 0;
     put_down_routine(dock4, table_tag, put_objs, coeffs[0], coeffs[1], mov);
-
-    ROS_INFO("Object detection results:");
-    ROS_INFO("Table (AprilTag 10) found at x=%f y=%f from dock %u", table_tag.x, table_tag.y, table_tag.dock);
-    for(auto t : tags) 
-        ROS_INFO("AprilTag %u detected at x=%f y=%f from dock %u", t.second.id, t.second.x, t.second.y, t.second.dock);
 
     // for(int i=5; i>=1; i--) {
     //     ROS_INFO("Moving to dock %u.", i);
     //     mov.goAround(i);
     //     wait_time.sleep();
     // }
-return 0;
+
+    return 0;
 }
