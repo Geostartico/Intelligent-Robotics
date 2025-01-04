@@ -18,8 +18,9 @@ struct apriltag_str{
 
 float X_STEP = 0.15;
 
-void put_down_routine(std::vector<apriltag_str> tags, apriltag_str table_tag, int& put_objs, float m, float q, Movement mov) {
+void put_down_routine(std::vector<apriltag_str> tags, apriltag_str table_tag, int& put_objs, float m, float q, Movement& mov) {
     for (const auto& tag:tags) {
+	ROS_INFO("moving to: %d", tag.dock);
         mov.goAround(tag.dock);
         actionlib::SimpleActionClient<assignment2::ObjectMoveAction> ac("move_object", true);
         ROS_INFO("Waiting for Movemente_Handler server to start...");
@@ -47,8 +48,8 @@ void put_down_routine(std::vector<apriltag_str> tags, apriltag_str table_tag, in
         //pickupobject(cur_obj);
 
         // CHECK THIS, IS THE SAME REF. FRAME ??
-        float put_down_x = table_tag.x + ((put_objs + 1) * X_STEP);
-        float put_down_y = table_tag.y + ((put_objs + 1) * X_STEP) * m + q;
+        float put_down_y = table_tag.y + ((put_objs + 1) * X_STEP);
+        float put_down_x = table_tag.x - ((put_objs + 1) * X_STEP) * m + q;
         float dist1 = mov.dock_dist(put_down_x, put_down_y, 1);
         float dist2 = mov.dock_dist(put_down_x, put_down_y, 2);
         float dist3 = mov.dock_dist(put_down_x, put_down_y, 3);
@@ -69,6 +70,7 @@ void put_down_routine(std::vector<apriltag_str> tags, apriltag_str table_tag, in
         goal_place.tgt_pose.orientation.w = 0; 
         ac.sendGoal(goal_place);
         ac.waitForResult(ros::Duration(30.0));
+	put_objs++;
     }
 }
 
@@ -137,6 +139,16 @@ int main(int argc, char **argv) {
             }
         }  
     }
+    for(auto tag : tags){
+	    if(tag.second.dock==4)
+		    dock4.push_back(tag.second);
+	    else if(tag.second.dock==5)
+		    dock4.push_back(tag.second);
+	    else if(tag.second.dock==6)
+		    dock4.push_back(tag.second);
+    }
+    int put_objs;
+    put_down_routine(dock4, table_tag, put_objs, coeffs[0], coeffs[1], mov);
     ad_srv.request.create_collisions = true;
     ad_client.call(ad_srv);
 
@@ -150,6 +162,5 @@ int main(int argc, char **argv) {
     //     mov.goAround(i);
     //     wait_time.sleep();
     // }
-
-    return 0;
+return 0;
 }

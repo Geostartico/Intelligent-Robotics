@@ -111,12 +111,12 @@ class ArmMovementServer{
             std::string objname = get_name(id) + "_" + std::to_string(id);
             attachRequest.request.model_name_2 = objname;
             attachRequest.request.link_name_2 = objname +"_link" ;
-            if(gazebo_attach.call(attachRequest)){
-                ROS_INFO("object attached/detached correctly in gazebo");
-            }
-            else{
-                ROS_ERROR("unable to complete attaching/detaching action in gazebo");
-            }
+            //if(gazebo_attach.call(attachRequest)){
+            //    ROS_INFO("object attached/detached correctly in gazebo");
+            //}
+            //else{
+            //    ROS_ERROR("unable to complete attaching/detaching action in gazebo");
+            //}
             //moveit part
             std::string object_id = "box_april_"+std::to_string(id);
             std::vector<std::string> objects_query = {object_id};
