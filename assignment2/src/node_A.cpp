@@ -1,5 +1,7 @@
 #include <ros/ros.h>
 #include <map>
+#include <numeric> 
+#include <string> 
 #include <tf2_ros/transform_listener.h>
 #include <tiago_iaslab_simulation/Coeffs.h>
 #include "assignment2/apriltag_detect.h"
@@ -140,9 +142,15 @@ int main(int argc, char **argv) {
             std::vector<float> y = ad_srv.response.y;
             std::vector<float> z = ad_srv.response.z;
             std::vector<float> yaw = ad_srv.response.yaw;
+            ROS_INFO("Detections IDs: total=%lu, content=[%s]", 
+                    ids.size(),
+                    std::accumulate(ids.begin(), ids.end(), std::string(),
+                                    [](const std::string &a, int b) {
+                                        return a.empty() ? std::to_string(b) : a + ", " + std::to_string(b);
+                                    }).c_str());
             for(int j=0; j<ids.size(); j++) {
                 apriltag_str tmp{x[j], y[j], z[j], yaw[j], ids[j], i};
-                if(ids[j]==10){
+                if(ids[j]==10 && table_tag.dock==-1){
                     table_tag = tmp;
                     continue;
                 }
