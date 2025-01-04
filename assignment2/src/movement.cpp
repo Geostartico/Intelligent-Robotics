@@ -160,7 +160,7 @@ void Movement::go_counter_clockwise(int target_pos) {
 
     while(cur_pos != target_pos) {
         if(cur_pos==1 & target_pos>cur_pos) {
-            cur_pos=6
+            cur_pos=6;
             sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_Y_ORIENTATION);
             if(target_pos==6){
                 sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, POS_X_ORIENTATION);
@@ -228,8 +228,8 @@ void Movement::goAround(int target_pos) {
         ROS_WARN("Robot is already in target position.");
         return;
     }
-    int clockwiseDistance = (target - start + 6) % 6;
-    int counterclockwiseDistance = (start - target + 6) % 6;
+    int clockwiseDistance = (target_pos - cur_pos + 6) % 6;
+    int counterclockwiseDistance = (cur_pos - target_pos + 6) % 6;
     if (clockwiseDistance <= counterclockwiseDistance)
         go_clockwise(target_pos);
     else 
