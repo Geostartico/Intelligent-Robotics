@@ -48,7 +48,7 @@ void put_down_routine(std::vector<apriltag_str> tags, apriltag_str table_tag, in
 
         ROS_INFO("Sending goal to move_object server.");
         ac.sendGoal(goal_pick);
-        bool finished_before_timeout = ac.waitForResult(ros::Duration(30.0));
+        bool finished_before_timeout = ac.waitForResult(ros::Duration(45.0));
         if (finished_before_timeout) {
             actionlib::SimpleClientGoalState state = ac.getState();
             if (state == actionlib::SimpleClientGoalState::SUCCEEDED) {
@@ -57,7 +57,8 @@ void put_down_routine(std::vector<apriltag_str> tags, apriltag_str table_tag, in
                 ROS_WARN("Action did not succeed. State: %s", state.toString().c_str());
             }
         }
-        //pickupobject(cur_obj);
+        else
+            ROS_WARN("Action did not finish before timeout.");
 
         float put_down_y = table_tag.y + ((put_objs + 1) * X_STEP);
         float put_down_x = table_tag.x - ((put_objs + 1) * X_STEP) * m + q;
@@ -71,10 +72,11 @@ void put_down_routine(std::vector<apriltag_str> tags, apriltag_str table_tag, in
                 closestDock = dock;
             }
         }
-        mov.goAround(closestDock);
 
         //PLACE DOWN
         ROS_INFO("Placing down object with AprilTag %u in x=%f y=%f from dock %u", tag.id, put_down_x, put_down_y, closestDock);
+        mov.goAround(closestDock);
+        
         assignment2::ObjectMoveGoal goal_place;
         goal_place.pick = false;
         goal_place.tgt_id = tag.id;
@@ -150,8 +152,9 @@ int main(int argc, char **argv) {
                                     }).c_str());
             for(int j=0; j<ids.size(); j++) {
                 apriltag_str tmp{x[j], y[j], z[j], yaw[j], ids[j], i};
-                if(ids[j]==10 && table_tag.dock==-1){
-                    table_tag = tmp;
+                if(ids[j]==10){
+                    if(table_tag.dock==-1)
+                        table_tag = tmp;
                     continue;
                 }
                 auto it = tags.find(ids[j]);
