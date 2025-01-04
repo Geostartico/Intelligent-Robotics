@@ -46,9 +46,11 @@ Movement::Movement()
         corns.emplace_back(TABLE_2_X - off.first, TABLE_2_Y - off.second);
 
     // Move to initial position
-    sendGoalToMoveBase(docks[0].first, 0.0, NEG_Y_ORIENTATION);
-    sendGoalToMoveBase(docks[0].first, docks[0].second, POS_X_ORIENTATION);
-    cur_pos = 1;
+    //sendGoalToMoveBase(docks[0].first, 0.0, NEG_Y_ORIENTATION);
+    //sendGoalToMoveBase(docks[0].first, docks[0].second, POS_X_ORIENTATION);
+    sendGoalToMoveBase(docks[1].first, docks[1].second, NEG_Y_ORIENTATION);
+    //cur_pos = 1;
+    cur_pos = 2;
 }
 
 // Send goal to MoveBase

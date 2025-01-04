@@ -103,6 +103,7 @@ void detectionCallback(const apriltag_ros::AprilTagDetectionArrayConstPtr& msg){
     geometry_msgs::PoseStamped pos_in;
 
     for(int i = 0; i < msg->detections.size(); ++i){
+	ROS_INFO("DETECTED ID: %d",msg->detections.at(i).id[0]);
         geometry_msgs::PoseStamped pos_out;
         pos_in.header.frame_id = msg->detections.at(i).pose.header.frame_id;
         pos_in.pose.position.x = msg->detections.at(i).pose.pose.pose.position.x;
@@ -145,7 +146,7 @@ void lookDown() {
     target_point.header.stamp = ros::Time::now();
     target_point.point.x = 2.0; 
     target_point.point.y = 0.0; 
-    target_point.point.z = 0.0;
+    target_point.point.z = -0.3;
 
     goal.target = target_point;
 
