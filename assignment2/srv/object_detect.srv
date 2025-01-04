@@ -1,5 +1,0 @@
-bool ready
----
-float32[] objs_x
-float32[] objs_y
-int32[]   ids

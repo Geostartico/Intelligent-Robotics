@@ -9,18 +9,13 @@
 #include <cstdint>
 #include <thread>        
 #include <chrono>
-#include "assignment2/map_waypoints.h"
 #include "assignment2/apriltag_detect.h"
-#include "assignment2/WaypointMoveAction.h"
-#include "assignment2/ApriltagSearchAction.h"
 #include "assignment2/ObjectMoveAction.h"
 #include <moveit/move_group_interface/move_group_interface.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
 #include <moveit_msgs/DisplayTrajectory.h>
 #include <gazebo_ros_link_attacher/Attach.h>
 #include <moveit_msgs/AttachedCollisionObject.h>
-
-
 
 const std::set<int> prism { 1, 2, 3};
 const std::set<int> cube { 4, 5, 6};

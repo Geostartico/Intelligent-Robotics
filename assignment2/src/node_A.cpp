@@ -2,7 +2,6 @@
 #include <map>
 #include <tf2_ros/transform_listener.h>
 #include <tiago_iaslab_simulation/Coeffs.h>
-#include "assignment2/object_detect.h"
 #include "assignment2/apriltag_detect.h"
 #include "movement.h"
 #include <actionlib/client/simple_action_client.h>
