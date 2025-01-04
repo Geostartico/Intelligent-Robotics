@@ -57,15 +57,15 @@ class ArmMovementServer{
             if (goal -> pick){
                 
                 geometry_msgs::Pose tgtPose = goal->tgt_pose;
-                tgtPose.position.z -= APPRO;
+                tgtPose.position.z += APPRO;
                 moveArmToPoseTGT(moveGroup,plan,tgtPose);
                 ros::Duration(3.0).sleep();
-                tgtPose.position.z+= APPRO;
+                tgtPose.position.z-= APPRO;
                 moveLinearTGT(moveGroup,plan,tgtPose);
                 ros::Duration(2.0).sleep();
                 attach_detach_object(goal->tgt_id, true);
                 toggleGripper(false);
-                tgtPose.position.z-= APPRO;
+                tgtPose.position.z+= APPRO;
                 moveLinearTGT(moveGroup,plan,tgtPose);
                 ros::Duration(2.0).sleep();
                 moveArmToHome();
