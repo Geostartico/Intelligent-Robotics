@@ -67,11 +67,13 @@ std::set<int> triangle { 7, 8, 9};
 float PRISM_HEIGHT = 0.2;
 float PRISM_RADIUS = 0.05;
 float CUBE_SIDE = 0.05;
+float OBJ_PADDING = 0.05;
 float TRIANGLE_BASE = 0.05;
 float TRIANGLE_HEIGHT = 0.035;
 float TRIANGLE_LENGTH = 0.07;
 float TABLE_SIDE = 0.9;
 float TABLE_HEIGHT = 0.775;
+float TABLE_PADDING = 0.2;
 float TABLE_1_X = 7.82;
 float TABLE_1_Y = -1.96;
 float TABLE_2_X = 7.82;
@@ -209,9 +211,9 @@ void add_tables(){
     shape_msgs::SolidPrimitive primitive1;
     primitive1.type = primitive1.BOX;
     primitive1.dimensions.resize(3);
-    primitive1.dimensions[primitive1.BOX_X]= TABLE_SIDE; // Dimensions: X, Y, Z
-    primitive1.dimensions[primitive1.BOX_Y]= TABLE_SIDE; // Dimensions: X, Y, Z
-    primitive1.dimensions[primitive1.BOX_Z]= TABLE_HEIGHT; // Dimensions: X, Y, Z
+    primitive1.dimensions[primitive1.BOX_X]= TABLE_SIDE + TABLE_PADDING; // Dimensions: X, Y, Z
+    primitive1.dimensions[primitive1.BOX_Y]= TABLE_SIDE + TABLE_PADDING; // Dimensions: X, Y, Z
+    primitive1.dimensions[primitive1.BOX_Z]= TABLE_HEIGHT + TABLE_PADDING/2; // Dimensions: X, Y, Z
     geometry_msgs::Pose box_pose1;
     box_pose1.position.x = TABLE_1_X;
     box_pose1.position.y = TABLE_1_Y;
@@ -234,7 +236,7 @@ void add_tables(){
     geometry_msgs::Pose box_pose2;
     box_pose2.position.x = TABLE_2_X;
     box_pose2.position.y = TABLE_2_Y;
-    box_pose2.position.z = TABLE_HEIGHT/2;
+    box_pose2.position.z = TABLE_HEIGHT/2+ TABLE_PADDING/2;
     box_pose2.orientation.w = 1.0;
     collision_object2.primitives.push_back(primitive2);
     collision_object2.primitive_poses.push_back(box_pose2);
@@ -294,9 +296,9 @@ void add_collision_objects(){
         else{
             continue;
         }
-        primitive.dimensions[primitive.BOX_X]= width; // Dimensions: X, Y, Z
-        primitive.dimensions[primitive.BOX_Y]= length; // Dimensions: X, Y, Z
-        primitive.dimensions[primitive.BOX_Z]= height; // Dimensions: X, Y, Z
+        primitive.dimensions[primitive.BOX_X]= width + OBJ_PADDING; // Dimensions: X, Y, Z
+        primitive.dimensions[primitive.BOX_Y]= length + OBJ_PADDING; // Dimensions: X, Y, Z
+        primitive.dimensions[primitive.BOX_Z]= height + OBJ_PADDING; // Dimensions: X, Y, Z
         // Define the pose of the object
         geometry_msgs::Pose box_pose;
         box_pose.position.x = x_;
