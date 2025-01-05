@@ -33,9 +33,9 @@ std::pair<float,float> compute_coord(float start_x, float start_y, int count, fl
 
 void add_reference_collisions(float start_x, float start_y, float m, float q){
     std::vector<moveit_msgs::CollisionObject> collision_objects;
+    moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
     for(int i = 0; i < 3; i++){
         auto coords = compute_coord(start_x, start_y, i, m, q);
-        moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
         moveit_msgs::CollisionObject collision_object;
         collision_object.operation = collision_object.ADD;
         collision_object.id = "reference_obj_"+std::to_string(i);
@@ -55,6 +55,8 @@ void add_reference_collisions(float start_x, float start_y, float m, float q){
         collision_object.primitive_poses.push_back(box_pose);
         collision_objects.push_back(collision_object);
     }
+    planning_scene_interface.applyCollisionObjects(collision_objects);
+
 }
 void put_down_routine(std::vector<apriltag_str> tags, apriltag_str table_tag, int& put_objs, float m, float q, Movement& mov) {
     for (const auto& tag:tags) {
