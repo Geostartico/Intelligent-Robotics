@@ -59,8 +59,8 @@ void put_down_routine(std::vector<apriltag_str> tags, apriltag_str table_tag, in
         }
         else
             ROS_WARN("Action did not finish before timeout.");
-	float X_STEP = (0.85-q)/(3*m);
-
+	    
+        float X_STEP = (0.85-q)/(3*m);
         float put_down_y = table_tag.y + ((put_objs + 1) * X_STEP);
         float put_down_x = table_tag.x - ((put_objs + 1) * X_STEP) * m - q;
 
