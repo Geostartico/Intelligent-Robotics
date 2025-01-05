@@ -19,7 +19,8 @@ struct apriltag_str{
     int dock;
 };
 
-//float X_STEP = 0.15;
+const float TABLE_SIDE = 0.85;
+const float PADDING    = 0.1;
 
 void put_down_routine(std::vector<apriltag_str> tags, apriltag_str table_tag, int& put_objs, float m, float q, Movement& mov) {
     for (const auto& tag:tags) {
@@ -38,13 +39,13 @@ void put_down_routine(std::vector<apriltag_str> tags, apriltag_str table_tag, in
         goal_pick.tgt_pose.position.y =  tag.y;
         goal_pick.tgt_pose.position.z =  tag.z;
 
-        tf2::Quaternion tgt_yaw_qt;
-        tgt_yaw_qt.setRPY(0,M_PI_2,tag.yaw);
+        tf2::Quaternion qt;
+        qt.setRPY(0, M_PI_2, 0);
 
-        goal_pick.tgt_pose.orientation.w = tgt_yaw_qt.w();
-        goal_pick.tgt_pose.orientation.x = tgt_yaw_qt.x();
-        goal_pick.tgt_pose.orientation.y = tgt_yaw_qt.y();
-        goal_pick.tgt_pose.orientation.z = tgt_yaw_qt.z();
+        goal_pick.tgt_pose.orientation.w = qt.w();
+        goal_pick.tgt_pose.orientation.x = qt.x();
+        goal_pick.tgt_pose.orientation.y = qt.y();
+        goal_pick.tgt_pose.orientation.z = qt.z();
 
         ROS_INFO("Sending goal to move_object server.");
         ac.sendGoal(goal_pick);
@@ -60,19 +61,12 @@ void put_down_routine(std::vector<apriltag_str> tags, apriltag_str table_tag, in
         else
             ROS_WARN("Action did not finish before timeout.");
 	    
-        float X_STEP = (0.85-q)/(3*m);
-        float put_down_y = table_tag.y + ((put_objs + 1) * X_STEP);
-        float put_down_x = table_tag.x - ((put_objs + 1) * X_STEP) * m - q;
+        const int EXTRA = 2;
+        float x_step = (TABLE_SIDE-PADDING-q)/((3+EXTRA)*m);
+        float put_down_y = table_tag.y + ((put_objs + 1+EXTRA) * x_step);
+        float put_down_x = table_tag.x - ((put_objs + 1+EXTRA) * x_step) * m - q;
 
-        float minDist = std::numeric_limits<float>::max(); 
-        int closestDock = -1;       
-        for (int dock = 1; dock <= 3; ++dock) {
-            float dist = mov.dock_dist(put_down_x, put_down_y, dock);
-            if (dist < minDist) {
-                minDist = dist;
-                closestDock = dock;
-            }
-        }
+        int closestDock = mov.closest_dock(put_down_x, put_down_y);
 
         //PLACE DOWN
         ROS_INFO("Placing down object with AprilTag %u in x=%f y=%f from dock %u", tag.id, put_down_x, put_down_y, closestDock);
@@ -84,7 +78,10 @@ void put_down_routine(std::vector<apriltag_str> tags, apriltag_str table_tag, in
         goal_place.tgt_pose.position.x =  put_down_x;
         goal_place.tgt_pose.position.y =  put_down_y;
         goal_place.tgt_pose.position.z =  tag.z;
-        goal_place.tgt_pose.orientation.w = 0; 
+        goal_place.tgt_pose.orientation.w = qt.w();
+        goal_place.tgt_pose.orientation.x = qt.x();
+        goal_place.tgt_pose.orientation.y = qt.y();
+        goal_place.tgt_pose.orientation.z = qt.z();
         ROS_INFO("Sending goal to move_object server.");
         ac.sendGoal(goal_place);
         finished_before_timeout = ac.waitForResult(ros::Duration(45.0));
@@ -135,7 +132,7 @@ int main(int argc, char **argv) {
     std::map<int, apriltag_str> tags;
     apriltag_str table_tag{0,0,0,0,-1,-1};
 
-    for(int i=3; i<=6; i++) {
+    for(int i=3; i<=4; i++) {
         ROS_INFO("Moving to dock %u.", i);
         mov.goAround(i);
         wait_time.sleep();
@@ -163,12 +160,16 @@ int main(int argc, char **argv) {
                 auto it = tags.find(ids[j]);
                 if(it != tags.end()) {
                     if(mov.dock_dist(x[j], y[j], i) < mov.dock_dist(it->second.x, it->second.y, it->second.dock)) {
-                        ROS_INFO("Updating AprilTag %u: from dock %u to dock %u", ids[j], it->second.dock, i);
+                        int closestDock = mov.closest_dock(x[j], y[j]);
+                        tmp.dock = closestDock;
+                        ROS_INFO("Updating AprilTag %u: from dock %u to dock %u", ids[j], it->second.dock, closestDock);
                         tags[ids[j]] = tmp;
                     }
                 }
                 else {
-                    ROS_INFO("Adding new AprilTag %u at dock %u (x=%.2f, y=%.2f)", ids[j], i, x[j], y[j]);
+                    int closestDock = mov.closest_dock(x[j], y[j]);
+                    tmp.dock = closestDock;
+                    ROS_INFO("Adding new AprilTag %u at dock %u (x=%.2f, y=%.2f)", ids[j], closestDock, x[j], y[j]);
                     tags[ids[j]] = tmp;
                 }
             }
@@ -180,6 +181,27 @@ int main(int argc, char **argv) {
     for(auto t : tags) 
         ROS_INFO("AprilTag %u detected at x=%f y=%f from dock %u", t.second.id, t.second.x, t.second.y, t.second.dock);
 
+    assignment2::apriltag_detect ad_srv;
+    ad_srv.request.create_collisions = true;
+    std::vector<int> ids;
+    std::vector<float> x, y, z, yaw;
+    for(auto tag : tags) {
+        ids.push_back(tag.second.id);
+        x.push_back(tag.second.x);
+        y.push_back(tag.second.y);
+        z.push_back(tag.second.z);
+        yaw.push_back(tag.second.yaw);
+    }
+    ad_srv.request.ids = ids;
+    ad_srv.request.x = x;
+    ad_srv.request.y = y;
+    ad_srv.request.z = z;
+    ad_srv.request.yaw = yaw;
+    ROS_INFO("Creating collision objects from detections.");
+    if(ad_client.call(ad_srv))
+        ROS_INFO("Call to apriltags_detected_service: SUCCESSFUL.");
+
+    ROS_INFO("Starting the object placing routine.");
     for(auto tag : tags){
 	    if(tag.second.dock==4)
 		    dock4.push_back(tag.second);
@@ -188,13 +210,6 @@ int main(int argc, char **argv) {
 	    else if(tag.second.dock==6)
 		    dock6.push_back(tag.second);
     }
-    assignment2::apriltag_detect ad_srv;
-    ad_srv.request.create_collisions = true;
-    ROS_INFO("Creating collision objects from detections.");
-    if(ad_client.call(ad_srv))
-        ROS_INFO("Call to apriltags_detected_service: SUCCESSFUL.");
-
-    ROS_INFO("Starting the object placing routine.");
     int put_objs = 0;
     put_down_routine(dock4, table_tag, put_objs, coeffs[0], coeffs[1], mov);
 

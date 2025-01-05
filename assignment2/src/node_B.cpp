@@ -24,7 +24,8 @@ std::set<int> triangle { 7, 8, 9};
 float PRISM_HEIGHT = 0.1;
 float PRISM_RADIUS = 0.05;
 float CUBE_SIDE = 0.05;
-float OBJ_PADDING = 0.05;
+// float OBJ_PADDING = 0.05;
+float OBJ_PADDING = 0.0;
 float TRIANGLE_BASE = 0.05;
 float TRIANGLE_HEIGHT = 0.035;
 float TRIANGLE_LENGTH = 0.07;
@@ -82,7 +83,7 @@ std::map<int,aprilmean> detectionCallback(const apriltag_ros::AprilTagDetectionA
         tmp.y = pos_out.pose.position.y;
         tmp.z = pos_out.pose.position.z;
         tmp.id = msg->detections.at(i).id[0];
-	ROS_INFO("POS: x:%f y:%f",tmp.x,tmp.y);
+	    ROS_INFO("POS: x:%f y:%f",tmp.x,tmp.y);
         tf2::Quaternion quat;
         tf2::convert(pos_out.pose.orientation, quat);
         tf2::Matrix3x3(quat).getRPY(roll, pitch, yaw);
@@ -107,7 +108,7 @@ void lookDown() {
     target_point.header.stamp = ros::Time::now();
     target_point.point.x = 2.0; 
     target_point.point.y = 0.0; 
-    target_point.point.z = -0.3;
+    target_point.point.z = -0.40;
 
     goal.target = target_point;
 

@@ -35,6 +35,7 @@ public:
     Movement();
     void goAround(int target_pos);
     float dock_dist(float x, float y, int dock);
+    int closest_dock(float x, float y);
 };
 
 #endif // MOVEMENT_H

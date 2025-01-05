@@ -247,3 +247,16 @@ float Movement::dock_dist(float x, float y, int dock) {
     float y2 = docks[dock-1].second;
     return std::pow(x1 - x2, 2) + std::pow(y1 - y2, 2);
 }
+
+int Movement::closest_dock(float x, float y) {
+    float minDist = std::numeric_limits<float>::max(); 
+    int closestDock = -1;       
+    for (int dock = 1; dock <= 6; ++dock) {
+        float dist = dock_dist(x, y, dock);
+        if (dist < minDist) {
+            minDist = dist;
+            closestDock = dock;
+        }
+    }
+    return closestDock;
+}
