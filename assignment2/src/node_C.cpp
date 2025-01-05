@@ -25,6 +25,17 @@ const float OPENI = 0.10;
 const float CLOSEI = 0.02;
 const std::vector<double> HOME_JOINT_POSITION = {1.48, 1, 1.5, 1.56, -1, 1.39, 1.5};
 typedef actionlib::SimpleActionServer<assignment2::ObjectMoveAction> Server;
+const std::map<int, std::string> id2model = {
+    {1, "Hexagon"},
+    {2, "Hexagon_2"},
+    {3, "Hexagon_3"},
+    {4, "cube"},
+    {5, "cube_5"},
+    {6, "cube_6"},
+    {7, "Triangle"},
+    {8, "Triangle_8"},
+    {9, "Triangle_9"},
+};
 
 class ArmMovementServer{
     
@@ -103,42 +114,45 @@ class ArmMovementServer{
             gazebo_ros_link_attacher::Attach attachRequest;
             attachRequest.request.model_name_1 = "tiago";
             attachRequest.request.link_name_1 = "arm_7_link";
-            std::string objname = get_name(id) + "_" + std::to_string(id);
-            attachRequest.request.model_name_2 = objname;
-            attachRequest.request.link_name_2 = objname +"_link" ;
-            //if(gazebo_attach.call(attachRequest)){
-            //    ROS_INFO("object attached/detached correctly in gazebo");
-            //}
-            //else{
-            //    ROS_ERROR("unable to complete attaching/detaching action in gazebo");
-            //}
-            //moveit part
-            std::string object_id = "box_april_"+std::to_string(id);
-            std::vector<std::string> objects_query = {object_id};
-            moveit_msgs::CollisionObject coll = planning_scene_interface.getObjects(objects_query)[0];
-            std::string link_name = "arm_7_link";
-            std::vector<std::string> touch_links = {
-                "arm_1_link",
-                "arm_2_link",
-                "arm_3_link",
-                "arm_4_link",
-                "arm_5_link",
-                "arm_6_link",
-                "arm_7_link",
-                "gripper_left_finger_link",
-                "gripper_right_finger_link",
-            };
-            moveit_msgs::AttachedCollisionObject attached_object;
-            attached_object.link_name = link_name;
-            attached_object.object = coll;
-            attached_object.touch_links = touch_links;
-            if(attach){
-                attached_object.object.operation = moveit_msgs::CollisionObject::ADD;
-                planning_scene_interface.applyAttachedCollisionObject(attached_object);
+            //std::string objname = get_name(id) + "_" + std::to_string(id);
+            attachRequest.request.model_name_2 = id2model.at(id);
+            attachRequest.request.link_name_2 = id2model.at(id) +"_link" ;
+            if(gazebo_attach.call(attachRequest)){
+                ROS_INFO("object attached/detached correctly in gazebo");
             }
             else{
-                attached_object.object.operation = moveit_msgs::CollisionObject::REMOVE;
-                planning_scene_interface.applyAttachedCollisionObject(attached_object);
+                ROS_ERROR("unable to complete attaching/detaching action in gazebo");
+            }
+            //moveit part
+            moveit::planning_interface::MoveGroupInterface moveGroup("arm_torso");
+            std::string object_id = "box_april_"+std::to_string(id);
+            //std::vector<std::string> objects_query = {object_id};
+            //moveit_msgs::CollisionObject coll = planning_scene_interface.getObjects(objects_query)[0];
+            std::string link_name = "arm_7_link";
+            std::vector<std::string> touch_links = {
+               // "arm_1_link",
+               // "arm_2_link",
+               // "arm_3_link",
+               // "arm_4_link",
+               // "arm_5_link",
+               // "arm_6_link",
+                "arm_7_link"
+               // "gripper_left_finger_link",
+               // "gripper_right_finger_link",
+            };
+            //moveit_msgs::AttachedCollisionObject attached_object;
+            //attached_object.link_name = link_name;
+            //attached_object.object = coll;
+            //attached_object.touch_links = touch_links;
+            if(attach){
+                //attached_object.object.operation = moveit_msgs::CollisionObject::ADD;
+                //planning_scene_interface.applyAttachedCollisionObject(attached_object);
+                moveGroup.attachObject(object_id, link_name, touch_links);
+            }
+            else{
+                //attached_object.object.operation = moveit_msgs::CollisionObject::REMOVE;
+                //planning_scene_interface.applyAttachedCollisionObject(attached_object);
+                moveGroup.attachObject(object_id);
             }
         }
 

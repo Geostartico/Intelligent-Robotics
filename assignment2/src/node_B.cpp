@@ -1,62 +1,19 @@
 #include <ros/ros.h>
-
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TransformStamped.h>
-
 #include <apriltag_ros/AprilTagDetectionArray.h>
-
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/transform_listener.h>
-
 #include <control_msgs/PointHeadAction.h>
 #include <control_msgs/FollowJointTrajectoryAction.h>
-
-
-
 #include <actionlib/client/simple_action_client.h>
-
 #include <map>
-
-#include "assignment2/apriltag_detect.h"
-
-
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#include <tf2_ros/transform_broadcaster.h>
-#include <tf2_ros/transform_listener.h>
-
-#include <control_msgs/PointHeadAction.h>
-#include <control_msgs/FollowJointTrajectoryAction.h>
-
-
-#include <ros/ros.h>
-
-#include <geometry_msgs/PoseStamped.h>
-#include <geometry_msgs/TransformStamped.h>
-
-
-#include <apriltag_ros/AprilTagDetectionArray.h>
-
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#include <tf2_ros/transform_broadcaster.h>
-#include <tf2_ros/transform_listener.h>
-
-#include <actionlib/client/simple_action_client.h>
-
-#include <map>
-
 #include <trajectory_msgs/JointTrajectoryPoint.h>
 #include <moveit/move_group_interface/move_group_interface.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
 #include <moveit_msgs/CollisionObject.h>
 #include <geometry_msgs/Pose.h>
-
-#include "assignment2/apriltag_detect.h"
-
-#include <actionlib/client/simple_action_client.h>
-
-#include <map>
-
 #include "assignment2/apriltag_detect.h"
 
 //after how many iterations to send the positions
@@ -87,9 +44,9 @@ struct aprilmean{
     float yaw;
 };
 
-std::map<int,aprilmean> apriltags_detected;
 
-void detectionCallback(const apriltag_ros::AprilTagDetectionArrayConstPtr& msg){
+std::map<int,aprilmean> detectionCallback(const apriltag_ros::AprilTagDetectionArrayConstPtr& msg){
+    std::map<int,aprilmean> apriltags_detected;
     //we need the position in respect to the map
     std::string target_frame = "map";
     std::string source_frame = msg->header.frame_id;
@@ -132,6 +89,7 @@ void detectionCallback(const apriltag_ros::AprilTagDetectionArrayConstPtr& msg){
         tmp.yaw = yaw;
         apriltags_detected[tmp.id] = (tmp);
     }
+    return apriltags_detected;
 }
 //function to move the head down in order to see the apriltags
 void lookDown() {
@@ -245,7 +203,7 @@ void add_tables(){
     planning_scene_interface.applyCollisionObjects(collision_objects);
 }
 
-void add_collision_objects(){
+void add_collision_objects(assignment2::apriltag_detect::Request tags){
     add_tables();
     moveit::planning_interface::MoveGroupInterface move_group("arm_torso");
     ROS_INFO("%s",move_group.getPlanningFrame().c_str());
@@ -259,12 +217,12 @@ void add_collision_objects(){
 
     // Add the collision object to the planning scene
     std::vector<moveit_msgs::CollisionObject> collision_objects;
-    for(auto tag : apriltags_detected){
-        int id_ = tag.second.id;
-        float x_ = tag.second.x;
-        float y_ = tag.second.y;
-        float z_ = tag.second.z;
-        float yaw_ = tag.second.yaw;
+    for(int i = 0; i < tags.ids.size(); i++){
+        int id_ = tags.ids[i];
+        float x_ = tags.x[i];
+        float y_ = tags.y[i];
+        float z_ = tags.z[i];
+        float yaw_ = tags.yaw[i];
         float height, width, length;
         moveit_msgs::CollisionObject collision_object;
         collision_object.operation = collision_object.ADD;
@@ -322,7 +280,7 @@ bool get_apriltags(assignment2::apriltag_detect::Request &req, assignment2::apri
     //the program saves the apriltags received from the detector
     ros::NodeHandle nh;
     const apriltag_ros::AprilTagDetectionArray::ConstPtr msg = ros::topic::waitForMessage<apriltag_ros::AprilTagDetectionArray>("tag_detections", nh);
-    detectionCallback(msg);
+    std::map<int, aprilmean> apriltags_detected = detectionCallback(msg);
     for(auto el : apriltags_detected){
         res.ids.push_back(el.second.id);
         res.x.push_back(el.second.x);
@@ -331,7 +289,7 @@ bool get_apriltags(assignment2::apriltag_detect::Request &req, assignment2::apri
         res.yaw.push_back(el.second.yaw);
     }
     if(req.create_collisions){
-        add_collision_objects();
+        add_collision_objects(req);
     }
     return true;
 }
