@@ -9,6 +9,9 @@
 #include <actionlib/client/simple_action_client.h>
 #include <actionlib/client/terminal_state.h>
 #include "assignment2/ObjectMoveAction.h"
+#include <moveit/move_group_interface/move_group_interface.h>
+#include <moveit/planning_scene_interface/planning_scene_interface.h>
+#include <moveit_msgs/CollisionObject.h>
 
 struct apriltag_str{
     float x;
@@ -22,6 +25,37 @@ struct apriltag_str{
 const float TABLE_SIDE = 0.85;
 const float PADDING    = 0.1;
 
+std::pair<float,float> compute_coord(float start_x, float start_y, int count, float m, float q){
+    const int EXTRA = 2;
+    float x_step = (TABLE_SIDE-PADDING-q)/((3+EXTRA)*m);
+    return std::make_pair(start_x - ((count + 1+EXTRA) * x_step) * m - q, start_y + ((count + 1+EXTRA) * x_step));
+}
+
+void add_reference_collisions(float start_x, float start_y, float m, float q){
+    std::vector<moveit_msgs::CollisionObject> collision_objects;
+    for(int i = 0; i < 3; i++){
+        auto coords = compute_coord(start_x, start_y, i, m, q);
+        moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
+        moveit_msgs::CollisionObject collision_object;
+        collision_object.operation = collision_object.ADD;
+        collision_object.id = "reference_obj_"+std::to_string(i);
+        collision_object.header.frame_id = "/map"; // Replace with the appropriate frame ID
+        shape_msgs::SolidPrimitive primitive;
+        primitive.type = primitive.BOX;
+        primitive.dimensions.resize(3);
+        primitive.dimensions[primitive.BOX_X]= 0.1; // Dimensions: X, Y, Z
+        primitive.dimensions[primitive.BOX_Y]= 0.1; // Dimensions: X, Y, Z
+        primitive.dimensions[primitive.BOX_Z]= 1; // Dimensions: X, Y, Z
+        geometry_msgs::Pose box_pose;
+        box_pose.position.x = coords.first;
+        box_pose.position.y = coords.second;
+        box_pose.position.z = 2.0;
+        box_pose.orientation.w = 1.0;
+        collision_object.primitives.push_back(primitive);
+        collision_object.primitive_poses.push_back(box_pose);
+        collision_objects.push_back(collision_object);
+    }
+}
 void put_down_routine(std::vector<apriltag_str> tags, apriltag_str table_tag, int& put_objs, float m, float q, Movement& mov) {
     for (const auto& tag:tags) {
         actionlib::SimpleActionClient<assignment2::ObjectMoveAction> ac("move_object", true);
@@ -61,10 +95,9 @@ void put_down_routine(std::vector<apriltag_str> tags, apriltag_str table_tag, in
         else
             ROS_WARN("Action did not finish before timeout.");
 	    
-        const int EXTRA = 2;
-        float x_step = (TABLE_SIDE-PADDING-q)/((3+EXTRA)*m);
-        float put_down_y = table_tag.y + ((put_objs + 1+EXTRA) * x_step);
-        float put_down_x = table_tag.x - ((put_objs + 1+EXTRA) * x_step) * m - q;
+        std::pair<float, float> coords = compute_coord(table_tag.x, table_tag.y, put_objs, m, q);
+        float put_down_y = coords.second;
+        float put_down_x = coords.first;
 
         int closestDock = mov.closest_dock(put_down_x, put_down_y);
 
@@ -180,6 +213,8 @@ int main(int argc, char **argv) {
     ROS_INFO("Table (AprilTag 10) found at x=%f y=%f from dock %u", table_tag.x, table_tag.y, table_tag.dock);
     for(auto t : tags) 
         ROS_INFO("AprilTag %u detected at x=%f y=%f from dock %u", t.second.id, t.second.x, t.second.y, t.second.dock);
+
+    add_reference_collisions(table_tag.x, table_tag.y, coeffs[0], coeffs[1]);
 
     assignment2::apriltag_detect ad_srv;
     ad_srv.request.create_collisions = true;

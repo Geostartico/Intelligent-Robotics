@@ -59,7 +59,10 @@ class ArmMovementServer{
             moveit::planning_interface::PlanningSceneInterface planningSceneInterface;   
 
             moveArmToHome();
-            toggleGripper(true);
+
+            if(goal->pick)
+                toggleGripper(true);
+
             if (goal -> pick){
                 std::vector<std::string> tmp = {"box_april_"+std::to_string(goal->tgt_id)};
                 planningSceneInterface.removeCollisionObjects(tmp);
