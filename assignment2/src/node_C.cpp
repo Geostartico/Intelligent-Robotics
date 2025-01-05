@@ -58,7 +58,7 @@ class ArmMovementServer{
                 tgtPose.position.z-= APPRO;
                 moveLinearTGT(moveGroup,plan,tgtPose);
                 ros::Duration(2.0).sleep();
-                attach_detach_object(goal->tgt_id, true);
+                //attach_detach_object(goal->tgt_id, true);
                 toggleGripper(false);
                 tgtPose.position.z+= APPRO;
                 moveLinearTGT(moveGroup,plan,tgtPose);
@@ -73,7 +73,7 @@ class ArmMovementServer{
                 tgtPose.position.z+= APPRO;
                 moveLinearTGT(moveGroup,plan,tgtPose);
                 ros::Duration(2.0).sleep();
-                attach_detach_object(goal->tgt_id, false);
+                //attach_detach_object(goal->tgt_id, false);
                 toggleGripper(true);
                 tgtPose.position.z-= APPRO;
                 moveLinearTGT(moveGroup,plan,tgtPose);

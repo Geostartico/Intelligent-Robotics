@@ -63,13 +63,13 @@ void Movement::sendGoalToMoveBase(double x, double y, const geometry_msgs::Quate
     goal.target_pose.pose.position.z = 0.0;
     goal.target_pose.pose.orientation = orientation;
 
-    ROS_INFO("Sending goal: x=%.2f, y=%.2f, orientation=[%.2f, %.2f, %.2f, %.2f]",
-             x, y, orientation.x, orientation.y, orientation.z, orientation.w);
+    //ROS_INFO("Sending goal: x=%.2f, y=%.2f, orientation=[%.2f, %.2f, %.2f, %.2f]",
+    //         x, y, orientation.x, orientation.y, orientation.z, orientation.w);
 
     ac.sendGoal(goal);
     if (ac.waitForResult(ros::Duration(20))) {
         if (ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED) {
-            ROS_INFO("Goal reached successfully!");
+            //ROS_INFO("Goal reached successfully!");
         } else {
             ROS_WARN("Failed to reach the goal.");
         }

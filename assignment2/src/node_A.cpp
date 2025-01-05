@@ -19,7 +19,7 @@ struct apriltag_str{
     int dock;
 };
 
-float X_STEP = 0.15;
+//float X_STEP = 0.15;
 
 void put_down_routine(std::vector<apriltag_str> tags, apriltag_str table_tag, int& put_objs, float m, float q, Movement& mov) {
     for (const auto& tag:tags) {
@@ -39,7 +39,7 @@ void put_down_routine(std::vector<apriltag_str> tags, apriltag_str table_tag, in
         goal_pick.tgt_pose.position.z =  tag.z;
 
         tf2::Quaternion tgt_yaw_qt;
-        tgt_yaw_qt.setRPY(0,0,tag.yaw);
+        tgt_yaw_qt.setRPY(0,M_PI_2,tag.yaw);
 
         goal_pick.tgt_pose.orientation.w = tgt_yaw_qt.w();
         goal_pick.tgt_pose.orientation.x = tgt_yaw_qt.x();
@@ -59,9 +59,10 @@ void put_down_routine(std::vector<apriltag_str> tags, apriltag_str table_tag, in
         }
         else
             ROS_WARN("Action did not finish before timeout.");
+	float X_STEP = (0.85-q)/(3*m);
 
         float put_down_y = table_tag.y + ((put_objs + 1) * X_STEP);
-        float put_down_x = table_tag.x - ((put_objs + 1) * X_STEP) * m + q;
+        float put_down_x = table_tag.x - ((put_objs + 1) * X_STEP) * m - q;
 
         float minDist = std::numeric_limits<float>::max(); 
         int closestDock = -1;       

@@ -64,7 +64,7 @@ int NUM_ITER_SEND = 10;
 std::set<int> prism { 1, 2, 3};
 std::set<int> cube { 4, 5, 6};
 std::set<int> triangle { 7, 8, 9};
-float PRISM_HEIGHT = 0.2;
+float PRISM_HEIGHT = 0.1;
 float PRISM_RADIUS = 0.05;
 float CUBE_SIDE = 0.05;
 float OBJ_PADDING = 0.05;
@@ -125,6 +125,7 @@ void detectionCallback(const apriltag_ros::AprilTagDetectionArrayConstPtr& msg){
         tmp.y = pos_out.pose.position.y;
         tmp.z = pos_out.pose.position.z;
         tmp.id = msg->detections.at(i).id[0];
+	ROS_INFO("POS: x:%f y:%f",tmp.x,tmp.y);
         tf2::Quaternion quat;
         tf2::convert(pos_out.pose.orientation, quat);
         tf2::Matrix3x3(quat).getRPY(roll, pitch, yaw);
@@ -213,7 +214,7 @@ void add_tables(){
     primitive1.dimensions.resize(3);
     primitive1.dimensions[primitive1.BOX_X]= TABLE_SIDE + TABLE_PADDING; // Dimensions: X, Y, Z
     primitive1.dimensions[primitive1.BOX_Y]= TABLE_SIDE + TABLE_PADDING; // Dimensions: X, Y, Z
-    primitive1.dimensions[primitive1.BOX_Z]= TABLE_HEIGHT + TABLE_PADDING/2; // Dimensions: X, Y, Z
+    primitive1.dimensions[primitive1.BOX_Z]= TABLE_HEIGHT; // Dimensions: X, Y, Z
     geometry_msgs::Pose box_pose1;
     box_pose1.position.x = TABLE_1_X;
     box_pose1.position.y = TABLE_1_Y;
@@ -230,13 +231,13 @@ void add_tables(){
     shape_msgs::SolidPrimitive primitive2;
     primitive2.type = primitive2.BOX;
     primitive2.dimensions.resize(3);
-    primitive2.dimensions[primitive2.BOX_X]= TABLE_SIDE; // Dimensions: X, Y, Z
-    primitive2.dimensions[primitive2.BOX_Y]= TABLE_SIDE; // Dimensions: X, Y, Z
+    primitive2.dimensions[primitive2.BOX_X]= TABLE_SIDE + TABLE_PADDING; // / Dimensions: X, Y, Z
+    primitive2.dimensions[primitive2.BOX_Y]= TABLE_SIDE + TABLE_PADDING; // / Dimensions: X, Y, Z
     primitive2.dimensions[primitive2.BOX_Z]= TABLE_HEIGHT; // Dimensions: X, Y, Z
     geometry_msgs::Pose box_pose2;
     box_pose2.position.x = TABLE_2_X;
     box_pose2.position.y = TABLE_2_Y;
-    box_pose2.position.z = TABLE_HEIGHT/2+ TABLE_PADDING/2;
+    box_pose2.position.z = TABLE_HEIGHT/2;
     box_pose2.orientation.w = 1.0;
     collision_object2.primitives.push_back(primitive2);
     collision_object2.primitive_poses.push_back(box_pose2);
@@ -296,9 +297,9 @@ void add_collision_objects(){
         else{
             continue;
         }
-        primitive.dimensions[primitive.BOX_X]= width + OBJ_PADDING; // Dimensions: X, Y, Z
-        primitive.dimensions[primitive.BOX_Y]= length + OBJ_PADDING; // Dimensions: X, Y, Z
-        primitive.dimensions[primitive.BOX_Z]= height + OBJ_PADDING; // Dimensions: X, Y, Z
+        primitive.dimensions[primitive.BOX_X]= width + OBJ_PADDING/2; // Dimensions: X, Y, Z
+        primitive.dimensions[primitive.BOX_Y]= length + OBJ_PADDING/2; // Dimensions: X, Y, Z
+        primitive.dimensions[primitive.BOX_Z]= height + OBJ_PADDING/2; // Dimensions: X, Y, Z
         // Define the pose of the object
         geometry_msgs::Pose box_pose;
         box_pose.position.x = x_;
