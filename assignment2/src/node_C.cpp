@@ -75,8 +75,10 @@ class ArmMovementServer{
                 moveArmToPoseTGT(moveGroup,plan,tgtPose);
                 planningSceneInterface.removeCollisionObjects(tmp);
                 //ros::Duration(3.0).sleep();
-                tgtPose.position.z-= APPRO + 0.1;
+                tgtPose.position.z-= APPRO - 0.1;
                 moveLinearTGT(moveGroup,plan,tgtPose);
+		//tmp[0] =  "table_2";
+                //planningSceneInterface.removeCollisionObjects(tmp);
                 //ros::Duration(2.0).sleep();
                 attach_detach_object(goal->tgt_id,colls[object_id], true);
                 toggleGripper(false);
@@ -150,9 +152,9 @@ class ArmMovementServer{
                // "arm_4_link",
                // "arm_5_link",
                // "arm_6_link",
-                "arm_7_link"
-               // "gripper_left_finger_link",
-               // "gripper_right_finger_link",
+                "arm_7_link",
+                "gripper_left_finger_link",
+                "gripper_right_finger_link"
             };
             //moveit_msgs::AttachedCollisionObject attached_object;
             //attached_object.link_name = link_name;

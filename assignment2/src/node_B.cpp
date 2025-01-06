@@ -108,7 +108,7 @@ void lookDown() {
     target_point.header.stamp = ros::Time::now();
     target_point.point.x = 2.0; 
     target_point.point.y = 0.0; 
-    target_point.point.z = -0.40;
+    target_point.point.z = -0.8;
 
     goal.target = target_point;
 
