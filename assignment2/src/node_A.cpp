@@ -160,7 +160,7 @@ int main(int argc, char **argv) {
 
     ROS_INFO("Initializing Movement object. Robot takes position at dock 2.");
     Movement mov;
-    wait_time.sleep();
+    // wait_time.sleep();
     ros::ServiceClient ad_client = n.serviceClient<assignment2::apriltag_detect>("apriltags_detected_service");
 
     std::vector<apriltag_str> dock4, dock5, dock6;
@@ -170,42 +170,50 @@ int main(int argc, char **argv) {
     for(int i=3; i<=4; i++) {
         ROS_INFO("Moving to dock %u.", i);
         mov.goAround(i);
-        wait_time.sleep();
-        assignment2::apriltag_detect ad_srv;
-        if(ad_client.call(ad_srv)) {
-            ROS_INFO("Call to apriltags_detected_service: SUCCESSFUL.");
-            std::vector<int> ids = ad_srv.response.ids;
-            std::vector<float> x = ad_srv.response.x;
-            std::vector<float> y = ad_srv.response.y;
-            std::vector<float> z = ad_srv.response.z;
-            std::vector<float> yaw = ad_srv.response.yaw;
-            ROS_INFO("Detections IDs: total=%lu, content=[%s]", 
-                    ids.size(),
-                    std::accumulate(ids.begin(), ids.end(), std::string(),
-                                    [](const std::string &a, int b) {
-                                        return a.empty() ? std::to_string(b) : a + ", " + std::to_string(b);
-                                    }).c_str());
-            for(int j=0; j<ids.size(); j++) {
-                apriltag_str tmp{x[j], y[j], z[j], yaw[j], ids[j], i};
-                if(ids[j]==10){
-                    if(table_tag.dock==-1)
-                        table_tag = tmp;
-                    continue;
-                }
-                auto it = tags.find(ids[j]);
-                if(it != tags.end()) {
-                    if(mov.dock_dist(x[j], y[j], i) < mov.dock_dist(it->second.x, it->second.y, it->second.dock)) {
+        // wait_time.sleep();
+
+        std::vector<double> turns;
+        if(i==3) turns = {0.0};
+        else turns = {0.0, -M_PI_4/3, 2*M_PI_4/3};
+
+        for(auto turn: turns) {
+            mov.spin(turn);
+            assignment2::apriltag_detect ad_srv;
+            if(ad_client.call(ad_srv)) {
+                ROS_INFO("Call to apriltags_detected_service: SUCCESSFUL.");
+                std::vector<int> ids = ad_srv.response.ids;
+                std::vector<float> x = ad_srv.response.x;
+                std::vector<float> y = ad_srv.response.y;
+                std::vector<float> z = ad_srv.response.z;
+                std::vector<float> yaw = ad_srv.response.yaw;
+                ROS_INFO("Detections IDs: total=%lu, content=[%s]", 
+                        ids.size(),
+                        std::accumulate(ids.begin(), ids.end(), std::string(),
+                                        [](const std::string &a, int b) {
+                                            return a.empty() ? std::to_string(b) : a + ", " + std::to_string(b);
+                                        }).c_str());
+                for(int j=0; j<ids.size(); j++) {
+                    apriltag_str tmp{x[j], y[j], z[j], yaw[j], ids[j], i};
+                    if(ids[j]==10){
+                        if(table_tag.dock==-1)
+                            table_tag = tmp;
+                        continue;
+                    }
+                    auto it = tags.find(ids[j]);
+                    if(it != tags.end()) {
+                        if(mov.dock_dist(x[j], y[j], i) < mov.dock_dist(it->second.x, it->second.y, it->second.dock)) {
+                            int closestDock = mov.closest_dock(x[j], y[j]);
+                            tmp.dock = closestDock;
+                            ROS_INFO("Updating AprilTag %u: from dock %u to dock %u", ids[j], it->second.dock, closestDock);
+                            tags[ids[j]] = tmp;
+                        }
+                    }
+                    else {
                         int closestDock = mov.closest_dock(x[j], y[j]);
                         tmp.dock = closestDock;
-                        ROS_INFO("Updating AprilTag %u: from dock %u to dock %u", ids[j], it->second.dock, closestDock);
+                        ROS_INFO("Adding new AprilTag %u at dock %u (x=%.2f, y=%.2f)", ids[j], closestDock, x[j], y[j]);
                         tags[ids[j]] = tmp;
                     }
-                }
-                else {
-                    int closestDock = mov.closest_dock(x[j], y[j]);
-                    tmp.dock = closestDock;
-                    ROS_INFO("Adding new AprilTag %u at dock %u (x=%.2f, y=%.2f)", ids[j], closestDock, x[j], y[j]);
-                    tags[ids[j]] = tmp;
                 }
             }
         }  
@@ -216,7 +224,7 @@ int main(int argc, char **argv) {
     for(auto t : tags) 
         ROS_INFO("AprilTag %u detected at x=%f y=%f from dock %u", t.second.id, t.second.x, t.second.y, t.second.dock);
 
-    add_reference_collisions(table_tag.x, table_tag.y, coeffs[0], coeffs[1]);
+    // add_reference_collisions(table_tag.x, table_tag.y, coeffs[0], coeffs[1]);
 
     assignment2::apriltag_detect ad_srv;
     ad_srv.request.create_collisions = true;
@@ -248,6 +256,7 @@ int main(int argc, char **argv) {
 		    dock6.push_back(tag.second);
     }
     int put_objs = 0;
+    mov.fix_pos();
     put_down_routine(dock4, table_tag, put_objs, coeffs[0], coeffs[1], mov);
 
     // for(int i=5; i>=1; i--) {

@@ -54,7 +54,7 @@ class ArmMovementServer{
 
             moveit::planning_interface::MoveGroupInterface moveGroup("arm_torso");
             moveGroup.setPoseReferenceFrame("map");
-            moveGroup.setPlanningTime(10.0);
+            moveGroup.setPlanningTime(30.0);
             moveit::planning_interface::MoveGroupInterface::Plan plan;
             moveit::planning_interface::PlanningSceneInterface planningSceneInterface;   
 
@@ -65,19 +65,20 @@ class ArmMovementServer{
 
             if (goal -> pick){
                 std::vector<std::string> tmp = {"box_april_"+std::to_string(goal->tgt_id)};
-		std::string object_id = "box_april_"+std::to_string(goal->tgt_id);
-		std::vector<std::string> objects_query = {object_id};
-		ROS_INFO("Object: %s",objects_query[0].c_str());
-		std::map<std::string, moveit_msgs::CollisionObject> colls = planningSceneInterface.getObjects(objects_query);
-		ROS_INFO("Objects: %d",int(colls.size()));
+                std::string object_id = "box_april_"+std::to_string(goal->tgt_id);
+                std::vector<std::string> objects_query = {object_id};
+                ROS_INFO("Object: %s",objects_query[0].c_str());
+                std::map<std::string, moveit_msgs::CollisionObject> colls = planningSceneInterface.getObjects(objects_query);
+                ROS_INFO("Objects: %d",int(colls.size()));
                 geometry_msgs::Pose tgtPose = goal->tgt_pose;
                 tgtPose.position.z += APPRO;
                 moveArmToPoseTGT(moveGroup,plan,tgtPose);
                 planningSceneInterface.removeCollisionObjects(tmp);
                 //ros::Duration(3.0).sleep();
-                tgtPose.position.z-= APPRO - 0.1;
+                tgtPose.position.z-= APPRO;
+                tgtPose.position.z+= 0.2;
                 moveLinearTGT(moveGroup,plan,tgtPose);
-		//tmp[0] =  "table_2";
+		        //tmp[0] =  "table_2";
                 //planningSceneInterface.removeCollisionObjects(tmp);
                 //ros::Duration(2.0).sleep();
                 attach_detach_object(goal->tgt_id,colls[object_id], true);
@@ -87,11 +88,12 @@ class ArmMovementServer{
                 //ros::Duration(2.0).sleep();
                 moveArmToHome();
                 result_.success = true;
-            }else {
+            } 
+            else {
                 geometry_msgs::Pose tgtPose = goal -> tgt_pose;
                 tgtPose.position.z += APPRO;
                 //moveArmToPoseTGT(moveGroup, plan, tgtPose);
-		moveLinearTGT(moveGroup, plan, tgtPose);
+		        moveLinearTGT(moveGroup, plan, tgtPose);
                 //ros::Duration(3.0).sleep();
                 tgtPose.position.z-= APPRO;
                 moveLinearTGT(moveGroup,plan,tgtPose);
@@ -136,10 +138,10 @@ class ArmMovementServer{
                 ROS_ERROR("unable to complete attaching/detaching action in gazebo");
             }
             //moveit part
-	    if(attach){
-		    coll.operation = coll.ADD;
-		    planning_scene_interface.applyCollisionObject(coll);
-	    }
+            if(attach){
+                coll.operation = coll.ADD;
+                planning_scene_interface.applyCollisionObject(coll);
+            }
             moveit::planning_interface::MoveGroupInterface moveGroup("arm_torso");
             std::string object_id = "box_april_"+std::to_string(id);
             //std::vector<std::string> objects_query = {object_id};
@@ -171,7 +173,6 @@ class ArmMovementServer{
                 moveGroup.detachObject(object_id);
             }
         }
-
 
         void moveArmToHome() {
             moveit::planning_interface::MoveGroupInterface move_group("arm"); 
@@ -206,9 +207,9 @@ class ArmMovementServer{
 
             gripper.sendGoal(goal);
             if (gripper.waitForResult()) {
-            ros::Duration(1.0).sleep();
-            ROS_INFO("Gripper moved successfully.");
-            return true;
+                // ros::Duration(1.0).sleep();
+                ROS_INFO("Gripper moved successfully.");
+                return true;
             }
             ROS_ERROR("gripper failure");
             return false;
@@ -221,7 +222,7 @@ class ArmMovementServer{
             if (planResult){
                 ROS_INFO("arm moving to tgt pose");
                 moveGroup.move();
-                ros::Duration(5.0).sleep();
+                // ros::Duration(5.0).sleep();
                 return true;
             }
 
@@ -237,7 +238,7 @@ class ArmMovementServer{
                 ROS_INFO("Arm in cartesian movement");
                 plan.trajectory_=path;
                 moveGroup.execute(plan);
-                ros::Duration(5.0).sleep();
+                // ros::Duration(5.0).sleep();
                 return;
             }
             ROS_ERROR("no cartesian path available");
@@ -245,14 +246,10 @@ class ArmMovementServer{
         }   
 };
 
-
-
-
 int main(int argc, char** argv) {
     ros::init(argc, argv, "ArmMovementServer");
     ros::AsyncSpinner spinner(1);
     spinner.start();
-
 
     ArmMovementServer move_object("move_object");
     ros::waitForShutdown();

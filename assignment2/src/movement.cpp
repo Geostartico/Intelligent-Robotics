@@ -2,6 +2,7 @@
 #include <ros/ros.h>
 #include <geometry_msgs/Quaternion.h>
 #include <move_base_msgs/MoveBaseGoal.h>
+#include <tf2_ros/transform_listener.h>
 
 // Constructor
 Movement::Movement()
@@ -234,6 +235,34 @@ void Movement::goAround(int target_pos) {
         go_clockwise(target_pos);
     else 
         go_counter_clockwise(target_pos);
+}
+
+void Movement::fix_pos() {
+    switch (cur_pos) {
+        case 1: sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, POS_X_ORIENTATION); break;
+        case 2: sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_Y_ORIENTATION); break;
+        case 3: sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_X_ORIENTATION); break;
+        case 4: sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_X_ORIENTATION); break;
+        case 5: sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, POS_Y_ORIENTATION); break;
+        case 6: sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, POS_X_ORIENTATION); break;
+    }
+}
+
+void Movement::spin(double yaw) {
+    move_base_msgs::MoveBaseGoal spin;
+    spin.target_pose.header.frame_id="base_link";
+    spin.target_pose.header.stamp=ros::Time::now();
+    spin.target_pose.pose.position.x=0.0;
+    spin.target_pose.pose.position.y=0.0;
+    tf2::Quaternion q;
+    q.setRPY(0,0,yaw);
+    spin.target_pose.pose.orientation.x=q.x();
+    spin.target_pose.pose.orientation.y=q.y();
+    spin.target_pose.pose.orientation.z=q.z();
+    spin.target_pose.pose.orientation.w=q.w();
+
+    ac.sendGoal(spin);   
+    bool finished = ac.waitForResult(ros::Duration(15.0));
 }
 
 float Movement::dock_dist(float x, float y, int dock) {
