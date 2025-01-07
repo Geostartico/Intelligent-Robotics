@@ -27,7 +27,7 @@ const float PADDING    = 0.1;
 
 std::pair<float,float> compute_coord(float start_x, float start_y, int count, float m, float q){
     const int EXTRA = 2;
-    float x_step = (TABLE_SIDE-PADDING-q)/((3+EXTRA)*m);
+    float x_step = (TABLE_SIDE - PADDING - q) / ((3 + EXTRA) * m);
     return std::make_pair(start_x - ((count + 1+EXTRA) * x_step) * m - q, start_y + ((count + 1+EXTRA) * x_step));
 }
 
@@ -45,11 +45,11 @@ void add_reference_collisions(float start_x, float start_y, float m, float q){
         primitive.dimensions.resize(3);
         primitive.dimensions[primitive.BOX_X]= 0.1; // Dimensions: X, Y, Z
         primitive.dimensions[primitive.BOX_Y]= 0.1; // Dimensions: X, Y, Z
-        primitive.dimensions[primitive.BOX_Z]= 1; // Dimensions: X, Y, Z
+        primitive.dimensions[primitive.BOX_Z]= 0.5; // Dimensions: X, Y, Z
         geometry_msgs::Pose box_pose;
         box_pose.position.x = coords.first;
         box_pose.position.y = coords.second;
-        box_pose.position.z = 2.0;
+        box_pose.position.z = 3.0;
         box_pose.orientation.w = 1.0;
         collision_object.primitives.push_back(primitive);
         collision_object.primitive_poses.push_back(box_pose);
@@ -76,7 +76,10 @@ void put_down_routine(apriltag_str tag, apriltag_str table_tag, int& put_objs, f
     goal_pick.tgt_pose.position.z =  tag.z;
 
     tf2::Quaternion qt;
-    qt.setRPY(0, M_PI_2, 0);
+    if(tag.id==7 || tag.id==8 || tag.id==9)
+        qt.setRPY(0, M_PI_2, tag.yaw);
+    else 
+        qt.setRPY(0, M_PI_2, tag.yaw - M_PI_2);
 
     goal_pick.tgt_pose.orientation.w = qt.w();
     goal_pick.tgt_pose.orientation.x = qt.x();
@@ -113,6 +116,7 @@ void put_down_routine(apriltag_str tag, apriltag_str table_tag, int& put_objs, f
     goal_place.tgt_pose.position.x =  put_down_x;
     goal_place.tgt_pose.position.y =  put_down_y;
     goal_place.tgt_pose.position.z =  tag.z;
+    qt.setRPY(0, M_PI_2, 0);
     goal_place.tgt_pose.orientation.w = qt.w();
     goal_place.tgt_pose.orientation.x = qt.x();
     goal_place.tgt_pose.orientation.y = qt.y();
@@ -225,7 +229,7 @@ int main(int argc, char **argv) {
             for(auto t : tags) 
                 ROS_INFO("AprilTag %u detected at x=%f y=%f from dock %u", t.second.id, t.second.x, t.second.y, t.second.dock);
 
-            // add_reference_collisions(table_tag.x, table_tag.y, coeffs[0], coeffs[1]);
+            add_reference_collisions(table_tag.x, table_tag.y, coeffs[0], coeffs[1]);
 
             assignment2::apriltag_detect ad_srv_coll;
             ad_srv_coll.request.create_collisions = true;

@@ -246,12 +246,13 @@ void add_collision_objects(assignment2::apriltag_detect::Request tags){
             length = CUBE_SIDE;
         }
         else if(triangle.find(id_) != triangle.end()){
-            z_ -= TRIANGLE_HEIGHT/2;
-            x_ += sin(yaw_) * TRIANGLE_BASE/4;
-            y_ -= cos(yaw_) * TRIANGLE_BASE/4;
+            z_ -= TRIANGLE_HEIGHT/2; // TO DO: NOT HALF
+            // TO DO: REMOVE X Y CHANGE AFTER CHANGES TO DETECTION
+            x_ += sin(yaw_) * TRIANGLE_LENGTH/4; // TO DO: CHECK
+            y_ -= cos(yaw_) * TRIANGLE_LENGTH/4; // TO DO: CHECK
             height = TRIANGLE_HEIGHT;
-            width = TRIANGLE_LENGTH;
-            length = TRIANGLE_BASE;
+            width = TRIANGLE_BASE;
+            length = TRIANGLE_LENGTH;
         }
         else{
             continue;

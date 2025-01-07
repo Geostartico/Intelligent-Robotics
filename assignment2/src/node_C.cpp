@@ -73,10 +73,10 @@ class ArmMovementServer{
                 geometry_msgs::Pose tgtPose = goal->tgt_pose;
                 tgtPose.position.z += APPRO;
                 moveArmToPoseTGT(moveGroup,plan,tgtPose);
-                planningSceneInterface.removeCollisionObjects(tmp);
+                // planningSceneInterface.removeCollisionObjects(tmp);
                 //ros::Duration(3.0).sleep();
                 tgtPose.position.z-= APPRO;
-                tgtPose.position.z+= 0.2;
+                tgtPose.position.z+= 0.10;
                 moveLinearTGT(moveGroup,plan,tgtPose);
 		        //tmp[0] =  "table_2";
                 //planningSceneInterface.removeCollisionObjects(tmp);
@@ -96,6 +96,7 @@ class ArmMovementServer{
 		        moveLinearTGT(moveGroup, plan, tgtPose);
                 //ros::Duration(3.0).sleep();
                 tgtPose.position.z-= APPRO;
+                tgtPose.position.z+= 0.15;
                 moveLinearTGT(moveGroup,plan,tgtPose);
                 //ros::Duration(2.0).sleep();
                 attach_detach_object(goal->tgt_id,moveit_msgs::CollisionObject{}, false);
@@ -122,6 +123,8 @@ class ArmMovementServer{
             }
             return("error");
         }
+
+        // TO DO: CAMBIA I NOMI DEI MODELLI
         void attach_detach_object(int id, moveit_msgs::CollisionObject coll, bool attach){
             moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
             ros::ServiceClient gazebo_attach = nh_.serviceClient<gazebo_ros_link_attacher::Attach>("/link_attacher_node/" + attach ? "attach" : "detach");
@@ -138,10 +141,10 @@ class ArmMovementServer{
                 ROS_ERROR("unable to complete attaching/detaching action in gazebo");
             }
             //moveit part
-            if(attach){
-                coll.operation = coll.ADD;
-                planning_scene_interface.applyCollisionObject(coll);
-            }
+            // if(attach){
+            //     coll.operation = coll.ADD;
+            //     planning_scene_interface.applyCollisionObject(coll);
+            // }
             moveit::planning_interface::MoveGroupInterface moveGroup("arm_torso");
             std::string object_id = "box_april_"+std::to_string(id);
             //std::vector<std::string> objects_query = {object_id};
