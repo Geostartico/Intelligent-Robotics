@@ -26,9 +26,9 @@ float PRISM_RADIUS = 0.05;
 float CUBE_SIDE = 0.05;
 // float OBJ_PADDING = 0.05;
 float OBJ_PADDING = 0.0;
-float TRIANGLE_BASE = 0.05;
+float TRIANGLE_BASE = 0.07;
 float TRIANGLE_HEIGHT = 0.035;
-float TRIANGLE_LENGTH = 0.07;
+float TRIANGLE_LENGTH = 0.05;
 float TABLE_SIDE = 0.9;
 float TABLE_HEIGHT = 0.775;
 float TABLE_PADDING = 0.2;
@@ -44,7 +44,6 @@ struct aprilmean{
     int id;
     float yaw;
 };
-
 
 std::map<int,aprilmean> detectionCallback(const apriltag_ros::AprilTagDetectionArrayConstPtr& msg){
     std::map<int,aprilmean> apriltags_detected;
@@ -83,11 +82,18 @@ std::map<int,aprilmean> detectionCallback(const apriltag_ros::AprilTagDetectionA
         tmp.y = pos_out.pose.position.y;
         tmp.z = pos_out.pose.position.z;
         tmp.id = msg->detections.at(i).id[0];
-	    ROS_INFO("POS: x:%f y:%f",tmp.x,tmp.y);
+
         tf2::Quaternion quat;
         tf2::convert(pos_out.pose.orientation, quat);
         tf2::Matrix3x3(quat).getRPY(roll, pitch, yaw);
         tmp.yaw = yaw;
+
+        if(triangle.find(tmp.id) != triangle.end()) {
+            tmp.y += sin(tmp.yaw) * TRIANGLE_BASE/4; 
+            tmp.x += cos(tmp.yaw) * TRIANGLE_BASE/4;
+        }
+	    ROS_INFO("POS: x:%f y:%f", tmp.x, tmp.y);
+
         apriltags_detected[tmp.id] = (tmp);
     }
     return apriltags_detected;
@@ -246,13 +252,9 @@ void add_collision_objects(assignment2::apriltag_detect::Request tags){
             length = CUBE_SIDE;
         }
         else if(triangle.find(id_) != triangle.end()){
-            z_ -= TRIANGLE_HEIGHT/2; // TO DO: NOT HALF
-            // TO DO: REMOVE X Y CHANGE AFTER CHANGES TO DETECTION
-            x_ += sin(yaw_) * TRIANGLE_LENGTH/4; // TO DO: CHECK
-            y_ -= cos(yaw_) * TRIANGLE_LENGTH/4; // TO DO: CHECK
             height = TRIANGLE_HEIGHT;
-            width = TRIANGLE_BASE;
-            length = TRIANGLE_LENGTH;
+            width = TRIANGLE_LENGTH;
+            length = TRIANGLE_BASE;
         }
         else{
             continue;

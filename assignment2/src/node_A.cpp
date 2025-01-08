@@ -172,10 +172,13 @@ int main(int argc, char **argv) {
     apriltag_str to_move{0,0,0,0,-1,-1};
     int put_objs = 0;
 
-    for(int i=3; i<=4; i++) {
+    for(int i=3; i<=6; i++) {
         std::vector<double> turns;
         if(i==3) turns = {0.0};
         else turns = {0.0, -M_PI_4/3, 2*M_PI_4/3};
+
+        // REMOVE THIS
+        if(i==4 || i==6) continue;
 
         do {
             ROS_INFO("Moving to dock %u.", i);
@@ -229,6 +232,8 @@ int main(int argc, char **argv) {
             for(auto t : tags) 
                 ROS_INFO("AprilTag %u detected at x=%f y=%f from dock %u", t.second.id, t.second.x, t.second.y, t.second.dock);
 
+            mov.fix_pos();
+
             add_reference_collisions(table_tag.x, table_tag.y, coeffs[0], coeffs[1]);
 
             assignment2::apriltag_detect ad_srv_coll;
@@ -255,7 +260,6 @@ int main(int argc, char **argv) {
             for(auto tag : tags)
                 if(to_move.id == -1 && tag.second.dock==i)
                     to_move = tag.second;
-            mov.fix_pos();
             if(to_move.id != -1) {
                 ROS_INFO("Starting the object placing routine.");
                 put_down_routine(to_move, table_tag, put_objs, coeffs[0], coeffs[1], mov);
