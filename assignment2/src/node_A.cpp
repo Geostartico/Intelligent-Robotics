@@ -59,14 +59,52 @@ void add_reference_collisions(float start_x, float start_y, float m, float q){
 
 }
 
-void put_down_routine(apriltag_str tag, apriltag_str table_tag, int& put_objs, float m, float q, Movement& mov) {
+void add_collision_objs(std::map<int, apriltag_str> tags, ros::ServiceClient& ad_client) {
+    assignment2::apriltag_detect ad_srv_coll;
+    ad_srv_coll.request.create_collisions = true;
+    std::vector<int> ids;
+    std::vector<float> x, y, z, yaw;
+    for(auto tag : tags) {
+        ids.push_back(tag.second.id);
+        x.push_back(tag.second.x);
+        y.push_back(tag.second.y);
+        z.push_back(tag.second.z);
+        yaw.push_back(tag.second.yaw);
+    }
+    ad_srv_coll.request.ids = ids;
+    ad_srv_coll.request.x = x;
+    ad_srv_coll.request.y = y;
+    ad_srv_coll.request.z = z;
+    ad_srv_coll.request.yaw = yaw;
+    ROS_INFO("Creating collision objects from detections.");
+    if(ad_client.call(ad_srv_coll))
+        ROS_INFO("Call to apriltags_detected_service: SUCCESSFUL.");
+}
+
+void remove_collision_obj(int id_picked) {
+    moveit::planning_interface::PlanningSceneInterface planningSceneInterface;
+    std::map<std::string, moveit_msgs::CollisionObject> colls = planningSceneInterface.getObjects();
+    if(id_picked!=-1) {
+        std::string object_id = "box_april_"+std::to_string(id_picked);
+        colls.erase(object_id);
+    }
+    std::vector<std::string> to_remove;
+    for(auto it=colls.begin(); it!=colls.end(); it++) to_remove.push_back(it->first); 
+    planningSceneInterface.removeCollisionObjects(to_remove);
+}
+
+void put_down_routine(std::map<int, apriltag_str>& tags, int to_pick, apriltag_str table_tag, int& put_objs, float m, float q, Movement& mov, ros::ServiceClient& ad_client) {
     actionlib::SimpleActionClient<assignment2::ObjectMoveAction> ac("move_object", true);
     ROS_INFO("Waiting for move_object server to start.");
     ac.waitForServer();
 
+    apriltag_str tag = tags[to_pick];
+
     // PICK UP
     ROS_INFO("Picking up object with AprilTag %u at x=%f y=%f from dock %u.", tag.id, tag.x, tag.y, tag.dock);
     mov.goAround(tag.dock);
+
+    add_collision_objs(tags, ad_client);
 
     assignment2::ObjectMoveGoal goal_pick;
     goal_pick.pick = true;
@@ -99,6 +137,9 @@ void put_down_routine(apriltag_str tag, apriltag_str table_tag, int& put_objs, f
     }
     else
         ROS_WARN("Action did not finish before timeout.");
+
+    remove_collision_obj(tag.id);
+    tags.erase(tag.id);
     
     std::pair<float, float> coords = compute_coord(table_tag.x, table_tag.y, put_objs, m, q);
     float put_down_y = coords.second;
@@ -109,6 +150,8 @@ void put_down_routine(apriltag_str tag, apriltag_str table_tag, int& put_objs, f
     //PLACE DOWN
     ROS_INFO("Placing down object with AprilTag %u in x=%f y=%f from dock %u", tag.id, put_down_x, put_down_y, closestDock);
     mov.goAround(closestDock);
+
+    add_collision_objs(tags, ad_client);
     
     assignment2::ObjectMoveGoal goal_place;
     goal_place.pick = false;
@@ -135,6 +178,8 @@ void put_down_routine(apriltag_str tag, apriltag_str table_tag, int& put_objs, f
     else
         ROS_WARN("Action did not finish before timeout.");
     put_objs++;
+
+    remove_collision_obj(-1);
 }
 
 int main(int argc, char **argv) {
@@ -234,27 +279,7 @@ int main(int argc, char **argv) {
 
             mov.fix_pos();
 
-            add_reference_collisions(table_tag.x, table_tag.y, coeffs[0], coeffs[1]);
-
-            assignment2::apriltag_detect ad_srv_coll;
-            ad_srv_coll.request.create_collisions = true;
-            std::vector<int> ids;
-            std::vector<float> x, y, z, yaw;
-            for(auto tag : tags) {
-                ids.push_back(tag.second.id);
-                x.push_back(tag.second.x);
-                y.push_back(tag.second.y);
-                z.push_back(tag.second.z);
-                yaw.push_back(tag.second.yaw);
-            }
-            ad_srv_coll.request.ids = ids;
-            ad_srv_coll.request.x = x;
-            ad_srv_coll.request.y = y;
-            ad_srv_coll.request.z = z;
-            ad_srv_coll.request.yaw = yaw;
-            ROS_INFO("Creating collision objects from detections.");
-            if(ad_client.call(ad_srv_coll))
-                ROS_INFO("Call to apriltags_detected_service: SUCCESSFUL.");
+            // add_reference_collisions(table_tag.x, table_tag.y, coeffs[0], coeffs[1]);
 
             to_move.id = -1;
             for(auto tag : tags)
@@ -262,8 +287,7 @@ int main(int argc, char **argv) {
                     to_move = tag.second;
             if(to_move.id != -1) {
                 ROS_INFO("Starting the object placing routine.");
-                put_down_routine(to_move, table_tag, put_objs, coeffs[0], coeffs[1], mov);
-                tags.erase(to_move.id);
+                put_down_routine(tags, to_move.id, table_tag, put_objs, coeffs[0], coeffs[1], mov, ad_client);
             }
             else 
                 ROS_INFO("No object left to move from dock %u.", i);
