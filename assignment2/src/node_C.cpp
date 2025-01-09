@@ -24,6 +24,7 @@ const float APPRO = 0.30;
 const float OPENI = 0.10;
 const float CLOSEI = 0.02;
 const std::vector<double> HOME_JOINT_POSITION = {1.48, 1, 1.5, 1.56, -1, 1.39, 1.5};
+const std::vector<double> TUCKED_JOINT_POSITION = {0.200, -1.339, -0.200, 1.938, -1.570, 1.370, 0};
 typedef actionlib::SimpleActionServer<assignment2::ObjectMoveAction> Server;
 const std::map<int, std::string> id2model = {
     {1, "Hexagon"},
@@ -58,8 +59,6 @@ class ArmMovementServer{
             moveit::planning_interface::MoveGroupInterface::Plan plan;
             moveit::planning_interface::PlanningSceneInterface planningSceneInterface;   
 
-            moveArmToHome();
-
             if(goal->pick)
                 toggleGripper(true);
 
@@ -70,6 +69,7 @@ class ArmMovementServer{
                 ROS_INFO("Object: %s",objects_query[0].c_str());
                 std::map<std::string, moveit_msgs::CollisionObject> colls = planningSceneInterface.getObjects(objects_query);
                 ROS_INFO("Objects: %d",int(colls.size()));
+                moveJointToPos(HOME_JOINT_POSITION);
                 geometry_msgs::Pose tgtPose = goal->tgt_pose;
                 tgtPose.position.z += APPRO;
                 moveArmToPoseTGT(moveGroup,plan,tgtPose);
@@ -86,10 +86,12 @@ class ArmMovementServer{
                 tgtPose.position.z+= APPRO;
                 moveLinearTGT(moveGroup,plan,tgtPose);
                 //ros::Duration(2.0).sleep();
-                moveArmToHome();
+                moveJointToPos(HOME_JOINT_POSITION);
+                moveJointToPos(TUCKED_JOINT_POSITION);
                 result_.success = true;
             } 
             else {
+                moveJointToPos(HOME_JOINT_POSITION);
                 geometry_msgs::Pose tgtPose = goal -> tgt_pose;
                 tgtPose.position.z += APPRO;
                 //moveArmToPoseTGT(moveGroup, plan, tgtPose);
@@ -105,7 +107,8 @@ class ArmMovementServer{
                 tgtPose.position.z+= APPRO;
                 moveLinearTGT(moveGroup,plan,tgtPose);
                 //ros::Duration(2.0).sleep();
-                moveArmToHome();
+                moveJointToPos(HOME_JOINT_POSITION);
+                moveJointToPos(TUCKED_JOINT_POSITION);
                 result_.success = true;
             }
         }
@@ -133,6 +136,7 @@ class ArmMovementServer{
             attachRequest.request.model_name_1 = "tiago";
             attachRequest.request.link_name_1 = "arm_7_link";
             //std::string objname = get_name(id) + "_" + std::to_string(id);
+            ROS_ERROR("ID2MODEL: %s", id2model.at(id).c_str());
             attachRequest.request.model_name_2 = id2model.at(id);
             attachRequest.request.link_name_2 = id2model.at(id) +"_link" ;
             ros::Duration(1.0).sleep();
@@ -181,9 +185,9 @@ class ArmMovementServer{
             }
         }
 
-        void moveArmToHome() {
+        void moveJointToPos(const std::vector<double> joint_positions) {
             moveit::planning_interface::MoveGroupInterface move_group("arm"); 
-            move_group.setJointValueTarget(HOME_JOINT_POSITION);
+            move_group.setJointValueTarget(joint_positions);
             moveit::planning_interface::MoveGroupInterface::Plan home_plan;
             if (move_group.plan(home_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS) {
                 move_group.execute(home_plan);

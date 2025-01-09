@@ -88,9 +88,12 @@ void remove_collision_obj(int id_picked) {
         std::string object_id = "box_april_"+std::to_string(id_picked);
         colls.erase(object_id);
     }
-    std::vector<std::string> to_remove;
-    for(auto it=colls.begin(); it!=colls.end(); it++) to_remove.push_back(it->first); 
-    planningSceneInterface.removeCollisionObjects(to_remove);
+    std::vector<moveit_msgs::CollisionObject> to_remove;
+    for(auto it=colls.begin(); it!=colls.end(); it++){
+        to_remove.push_back(it->second);
+        it->second.operation=it->second.REMOVE;
+    }  
+    planningSceneInterface.applyCollisionObjects(to_remove);
 }
 
 void put_down_routine(std::map<int, apriltag_str>& tags, int to_pick, apriltag_str table_tag, int& put_objs, float m, float q, Movement& mov, ros::ServiceClient& ad_client) {
