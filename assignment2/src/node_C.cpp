@@ -101,6 +101,7 @@ class ArmMovementServer{
                 //ros::Duration(2.0).sleep();
                 attach_detach_object(goal->tgt_id,moveit_msgs::CollisionObject{}, false);
                 toggleGripper(true);
+                ros::Duration(1.0).sleep();
                 tgtPose.position.z+= APPRO;
                 moveLinearTGT(moveGroup,plan,tgtPose);
                 //ros::Duration(2.0).sleep();
@@ -134,7 +135,10 @@ class ArmMovementServer{
             //std::string objname = get_name(id) + "_" + std::to_string(id);
             attachRequest.request.model_name_2 = id2model.at(id);
             attachRequest.request.link_name_2 = id2model.at(id) +"_link" ;
-            if(gazebo_attach.call(attachRequest)){
+            ros::Duration(1.0).sleep();
+            bool status = gazebo_attach.call(attachRequest);
+            ros::Duration(2.0).sleep();
+            if(status){
                 ROS_INFO("object attached/detached correctly in gazebo");
             }
             else{
