@@ -15,6 +15,9 @@
 #include <moveit_msgs/CollisionObject.h>
 #include <geometry_msgs/Pose.h>
 #include "assignment2/apriltag_detect.h"
+#include <sensor_msgs/Image.h>
+#include <cv_bridge/cv_bridge.h>
+#include <opencv2/opencv.hpp>
 
 //after how many iterations to send the positions
 int NUM_ITER_SEND = 10;
@@ -61,8 +64,29 @@ std::map<int,aprilmean> detectionCallback(const apriltag_ros::AprilTagDetectionA
 
     geometry_msgs::PoseStamped pos_in;
 
+
+    ros::NodeHandle nh;
+    const sensor_msgs::Image::ConstPtr img_msg = ros::topic::waitForMessage<sensor_msgs::Image>("/xtion/rgb/image_color", nh);
+    cv::Mat img = cv_bridge::toCvCopy(img_msg, sensor_msgs::image_encodings::BGR8)->image;
     for(int i = 0; i < msg->detections.size(); ++i){
-	ROS_INFO("DETECTED ID: %d",msg->detections.at(i).id[0]);
+        ROS_INFO("DETECTED ID: %d",msg->detections.at(i).id[0]);
+        int roi_size = 20; // Define a small window size around the center
+        int x_center = msg->detections.at(i).pose.pose.pose.position.x;
+        int y_center = msg->detections.at(i).pose.pose.pose.position.y;
+        cv::Rect roi(std::max(0, x_center - roi_size / 2),
+                     std::max(0, y_center - roi_size / 2),
+                     roi_size,
+                     roi_size);
+        // Adjust the ROI size to fit within image bounds
+        roi = roi & cv::Rect(0, 0, img.cols, img.rows);
+        
+        // Extract the region of interest and calculate the mean
+        cv::Mat roi_image = img(roi);
+        cv::imshow("id", roi_image);
+        cv::Scalar mean_value = cv::mean(roi_image);
+        
+        ROS_INFO("Mean values around tag %d: B=%f, G=%f, R=%f",
+                 msg->detections.at(i).id[0], mean_value[0], mean_value[1], mean_value[2]);
         geometry_msgs::PoseStamped pos_out;
         pos_in.header.frame_id = msg->detections.at(i).pose.header.frame_id;
         pos_in.pose.position.x = msg->detections.at(i).pose.pose.pose.position.x;
