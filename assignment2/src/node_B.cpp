@@ -49,6 +49,7 @@ struct aprilmean{
     int id;
     float yaw;
 };
+image_geometry::PinholeCameraModel camera_model;
 
 std::map<int,aprilmean> detectionCallback(const apriltag_ros::AprilTagDetectionArrayConstPtr& msg){
     std::map<int,aprilmean> apriltags_detected;
@@ -70,13 +71,10 @@ std::map<int,aprilmean> detectionCallback(const apriltag_ros::AprilTagDetectionA
     ros::NodeHandle nh;
     const sensor_msgs::Image::ConstPtr img_msg = ros::topic::waitForMessage<sensor_msgs::Image>("/xtion/rgb/image_color", nh);
     cv::Mat img = cv_bridge::toCvCopy(img_msg, sensor_msgs::image_encodings::BGR8)->image;
-    image_geometry::PinholeCameraModel camera_model;
-    sensor_msgs::CameraInfoConstPtr caminfo = ros::topic::waitForMessage<sensor_msgs::CameraInfo>("/xtion/rgb/camera_info", nh);
-    camera_model.fromCameraInfo(caminfo);
     ROS_INFO("image size: %d %d ",img.rows, img.cols);
     for(int i = 0; i < msg->detections.size(); ++i){
         ROS_INFO("DETECTED ID: %d",msg->detections.at(i).id[0]);
-        int roi_size = 15; // Define a small window size around the center
+        int roi_size = 30; // Define a small window size around the center
 	float x, y,z;
 	x = msg->detections.at(i).pose.pose.pose.position.x;
 	y = msg->detections.at(i).pose.pose.pose.position.y;
@@ -86,18 +84,28 @@ std::map<int,aprilmean> detectionCallback(const apriltag_ros::AprilTagDetectionA
 	int y_center = center.y;
         ROS_INFO("center: x=%d, y=%d",
                 x_center, y_center);
-        cv::Rect roi(std::max(0, x_center - roi_size / 2),
-                     std::max(0, y_center - roi_size / 2),
-                     x_center + roi_size/2 > img.cols ? abs(x_center -img.cols-1) : roi_size,
-                     y_center + roi_size/2 > img.rows ? abs(y_center -img.rows-1) : roi_size);
-        // Adjust the ROI size to fit within image bounds
-        //roi = roi & cv::Rect(0, 0, img.cols, img.rows);
-        
-        // Extract the region of interest and calculate the mean
-        cv::Mat roi_image = img(roi);
-        cv::imshow("id", roi_image);
-        //cv::imwrite("/home/local/artigio86863/catkin_ws/"+std::to_string(msg->detections.at(i).id[0]), roi_image);
-        cv::Scalar mean_value = cv::mean(roi_image);
+	bool found = false;
+	cv::Scalar mean_value;
+	do{
+		cv::Rect roi(std::max(0, x_center - roi_size / 2),
+				std::max(0, y_center - roi_size / 2),
+				x_center + roi_size/2 > img.cols ? abs(x_center -img.cols-1) : roi_size,
+				y_center + roi_size/2 > img.rows ? abs(y_center -img.rows-1) : roi_size);
+		// Adjust the ROI size to fit within image bounds
+		//roi = roi & cv::Rect(0, 0, img.cols, img.rows);
+
+		// Extract the region of interest and calculate the mean
+		cv::Mat roi_image = img(roi);
+		cv::imshow("id", roi_image);
+		//cv::imwrite("/home/local/artigio86863/catkin_ws/"+std::to_string(msg->detections.at(i).id[0]), roi_image);
+		mean_value = cv::mean(roi_image);
+		if(mean_value[0]==mean_value[1]&&mean_value[0]==mean_value[2]&&mean_value[1]){
+			roi_size--;
+		}
+		else{
+			found=true;
+		}
+	}while(!found);
         
         ROS_INFO("Mean values around tag %d: B=%f, G=%f, R=%f",
                  msg->detections.at(i).id[0], mean_value[0], mean_value[1], mean_value[2]);
@@ -342,6 +350,8 @@ int main(int argc, char** argv)
 {
     ros::init(argc, argv, "locate_apriltag");
     ros::NodeHandle nh;
+    sensor_msgs::CameraInfoConstPtr caminfo = ros::topic::waitForMessage<sensor_msgs::CameraInfo>("/xtion/rgb/camera_info", nh);
+    camera_model.fromCameraInfo(caminfo);
     lookDown();
     move_torso();
     ROS_INFO_STREAM("locate_apriltag");

@@ -226,7 +226,7 @@ int main(int argc, char **argv) {
         else turns = {0.0, -M_PI_4/3, 2*M_PI_4/3};
 
         // REMOVE THIS
-        if(i==4 || i==6) continue;
+        if(i==5 || i==6) continue;
 
         do {
             ROS_INFO("Moving to dock %u.", i);
