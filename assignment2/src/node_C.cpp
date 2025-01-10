@@ -75,6 +75,7 @@ class ArmMovementServer{
                 geometry_msgs::Pose tgtPose = goal->tgt_pose;
                 tgtPose.position.z += APPRO;
                 moveArmToPoseTGT(moveGroup,plan,tgtPose);
+                remove_padding(goal->tgt_id);
                 // planningSceneInterface.removeCollisionObjects(tmp);
                 //ros::Duration(3.0).sleep();
                 tgtPose.position.z-= APPRO;
@@ -263,6 +264,20 @@ class ArmMovementServer{
             ROS_ERROR("no cartesian path available");
             return;
         }   
+        void remove_padding(int id){
+            moveit::planning_interface::PlanningSceneInterface planningSceneInterface;   
+            auto vec = planningSceneInterface.getObjects({"box_april_"+std::to_string(id)});
+            std::vector<moveit_msgs::CollisionObject> colls;
+            for(auto el : vec){
+                auto elcol = el.second.primitives[0];
+                elcol.dimensions[elcol.BOX_X] -= 0.05;
+                elcol.dimensions[elcol.BOX_Y] -= 0.05;
+                elcol.dimensions[elcol.BOX_Z] -= 0.05;
+                el.second.operation = el.second.ADD;
+                colls.push_back(el.second);
+            }
+            planningSceneInterface.applyCollisionObjects(colls);
+        }
 };
 
 int main(int argc, char** argv) {
