@@ -73,6 +73,7 @@
   <build_depend>actionlib_msgs</build_depend>
   <depend>control_msgs</depend>
   <exec_depend>actionlib_msgs</exec_depend>
+  <depend>image_geometry</depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->

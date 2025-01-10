@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   shape_msgs
   gazebo_ros_link_attacher
   control_msgs
+  image_geometry
 )
 
 add_service_files(
