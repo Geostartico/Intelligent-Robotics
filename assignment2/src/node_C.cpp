@@ -23,8 +23,10 @@ const std::set<int> triangle { 7, 8, 9};
 const float APPRO = 0.30;
 const float OPENI = 0.10;
 const float CLOSEI = 0.02;
-const std::vector<double> HOME_JOINT_POSITION = {1.48, 1, 1.5, 1.56, -1, 1.39, 1.5};
-const std::vector<double> TUCKED_JOINT_POSITION = {0.200, -1.339, -0.200, 1.938, -1.570, 1.370, 0};
+//const std::vector<double> HOME_JOINT_POSITION_MEH = {1.48, 1, 1.5, 1.56, -1, 1.39, 1.5};
+const std::vector<double> HOME_JOINT_POSITION = {0.200, 1, -1.68, 1.533, -2, 1.39, 0.10};
+//const std::vector<double> HOME_JOINT_POSITION = {1.7, 1, 1.5, 2.25, -0.7, 1.2, 0.10};
+const std::vector<double> TUCKED_JOINT_POSITION = {0.200, -1.339, -0.200, 1.938, -1.570, 1.370, 1.2};
 typedef actionlib::SimpleActionServer<assignment2::ObjectMoveAction> Server;
 const std::map<int, std::string> id2model = {
     {1, "Hexagon"},
@@ -87,8 +89,11 @@ class ArmMovementServer{
                 moveLinearTGT(moveGroup,plan,tgtPose);
                 //ros::Duration(2.0).sleep();
                 moveJointToPos(HOME_JOINT_POSITION);
-                moveJointToPos(TUCKED_JOINT_POSITION);
+                //moveJointToPos(TUCKED_JOINT_POSITION);
                 result_.success = true;
+                feedback_.status = {"Robot picked the piece."};
+                as.publishFeedback(feedback_);
+                as.setSucceeded(result_);
             } 
             else {
                 moveJointToPos(HOME_JOINT_POSITION);
@@ -110,6 +115,9 @@ class ArmMovementServer{
                 moveJointToPos(HOME_JOINT_POSITION);
                 moveJointToPos(TUCKED_JOINT_POSITION);
                 result_.success = true;
+                feedback_.status = {"Robot placed the piece."};
+                as.publishFeedback(feedback_);
+                as.setSucceeded(result_);
             }
         }
 
