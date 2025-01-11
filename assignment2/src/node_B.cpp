@@ -22,25 +22,29 @@
 #include <opencv2/opencv.hpp>
 
 //after how many iterations to send the positions
-int NUM_ITER_SEND = 10;
-std::set<int> prism { 1, 2, 3};
-std::set<int> cube { 4, 5, 6};
-std::set<int> triangle { 7, 8, 9};
-float PRISM_HEIGHT = 0.1;
-float PRISM_RADIUS = 0.05;
-float CUBE_SIDE = 0.05;
-float OBJ_PADDING = 0.05;
+const int NUM_ITER_SEND = 10;
+const std::set<int> prism { 1, 2, 3};
+const std::set<int> cube { 4, 5, 6};
+const std::set<int> triangle { 7, 8, 9};
+const float PRISM_HEIGHT = 0.1;
+const float PRISM_RADIUS = 0.05;
+const float CUBE_SIDE = 0.05;
+const float OBJ_PADDING = 0.05;
 //float OBJ_PADDING = 0.0;
-float TRIANGLE_BASE = 0.07;
-float TRIANGLE_HEIGHT = 0.035;
-float TRIANGLE_LENGTH = 0.05;
-float TABLE_SIDE = 0.9;
-float TABLE_HEIGHT = 0.775;
-float TABLE_PADDING = 0.2;
-float TABLE_1_X = 7.82;
-float TABLE_1_Y = -1.96;
-float TABLE_2_X = 7.82;
-float TABLE_2_Y = -3.01;
+const float TRIANGLE_BASE = 0.07;
+const float TRIANGLE_HEIGHT = 0.035;
+const float TRIANGLE_LENGTH = 0.05;
+const float TABLE_SIDE = 0.9;
+const float TABLE_HEIGHT = 0.775;
+const float TABLE_PADDING = 0.2;
+const float TABLE_1_X = 7.82;
+const float TABLE_1_Y = -1.96;
+const float TABLE_2_X = 7.82;
+const float TABLE_2_Y = -3.01;
+const int BLUE = 0;
+const int RED = 2;
+const int GREEN = 3;
+
 
 struct aprilmean{
     float x;
@@ -48,6 +52,7 @@ struct aprilmean{
     float z;
     int id;
     float yaw;
+    int color;
 };
 image_geometry::PinholeCameraModel camera_model;
 
@@ -75,40 +80,40 @@ std::map<int,aprilmean> detectionCallback(const apriltag_ros::AprilTagDetectionA
     for(int i = 0; i < msg->detections.size(); ++i){
         ROS_INFO("DETECTED ID: %d",msg->detections.at(i).id[0]);
         int roi_size = 30; // Define a small window size around the center
-	float x, y,z;
-	x = msg->detections.at(i).pose.pose.pose.position.x;
-	y = msg->detections.at(i).pose.pose.pose.position.y;
-	z = msg->detections.at(i).pose.pose.pose.position.z;
-	cv::Point2d center = camera_model.project3dToPixel(cv::Point3d{x,y,z});
-	int x_center = center.x;
-	int y_center = center.y;
+        float x, y,z;
+        x = msg->detections.at(i).pose.pose.pose.position.x;
+        y = msg->detections.at(i).pose.pose.pose.position.y;
+        z = msg->detections.at(i).pose.pose.pose.position.z;
+        cv::Point2d center = camera_model.project3dToPixel(cv::Point3d{x,y,z});
+        int x_center = center.x;
+        int y_center = center.y;
         ROS_INFO("center: x=%d, y=%d",
                 x_center, y_center);
-	bool found = false;
-	cv::Scalar mean_value;
-	do{
-		cv::Rect roi(std::max(0, x_center - roi_size / 2),
-				std::max(0, y_center - roi_size / 2),
-				x_center + roi_size/2 > img.cols ? abs(x_center -img.cols-1) : roi_size,
-				y_center + roi_size/2 > img.rows ? abs(y_center -img.rows-1) : roi_size);
-		// Adjust the ROI size to fit within image bounds
-		//roi = roi & cv::Rect(0, 0, img.cols, img.rows);
+        bool found = false;
+        cv::Scalar mean_value;
+        do{
+            cv::Rect roi(std::max(0, x_center - roi_size / 2),
+                    std::max(0, y_center - roi_size / 2),
+                    x_center + roi_size/2 > img.cols ? abs(x_center -img.cols-1) : roi_size,
+                    y_center + roi_size/2 > img.rows ? abs(y_center -img.rows-1) : roi_size);
+            // Adjust the ROI size to fit within image bounds
+            //roi = roi & cv::Rect(0, 0, img.cols, img.rows);
 
-		// Extract the region of interest and calculate the mean
-		cv::Mat roi_image = img(roi);
-		cv::imshow("id", roi_image);
-		//cv::imwrite("/home/local/artigio86863/catkin_ws/"+std::to_string(msg->detections.at(i).id[0]), roi_image);
-		mean_value = cv::mean(roi_image);
-		if(mean_value[0]==mean_value[1]&&mean_value[0]==mean_value[2]&&mean_value[1]){
-			roi_size--;
-		}
-		else{
-			found=true;
-		}
-	}while(!found);
-        
+            // Extract the region of interest and calculate the mean
+            cv::Mat roi_image = img(roi);
+            cv::imshow("id", roi_image);
+            //cv::imwrite("/home/local/artigio86863/catkin_ws/"+std::to_string(msg->detections.at(i).id[0]), roi_image);
+            mean_value = cv::mean(roi_image);
+            if(mean_value[0]==mean_value[1]&&mean_value[0]==mean_value[2]&&mean_value[1]){
+                roi_size--;
+            }
+            else{
+                found=true;
+            }
+        }while(!found);
+
         ROS_INFO("Mean values around tag %d: B=%f, G=%f, R=%f",
-                 msg->detections.at(i).id[0], mean_value[0], mean_value[1], mean_value[2]);
+                msg->detections.at(i).id[0], mean_value[0], mean_value[1], mean_value[2]);
         geometry_msgs::PoseStamped pos_out;
         pos_in.header.frame_id = msg->detections.at(i).pose.header.frame_id;
         pos_in.pose.position.x = msg->detections.at(i).pose.pose.pose.position.x;
@@ -133,12 +138,24 @@ std::map<int,aprilmean> detectionCallback(const apriltag_ros::AprilTagDetectionA
         tf2::convert(pos_out.pose.orientation, quat);
         tf2::Matrix3x3(quat).getRPY(roll, pitch, yaw);
         tmp.yaw = yaw;
+        if(tmp.id==10){
+            tmp.color = -1;
+        }
+        else if(mean_value[0]>mean_value[1] && mean_value[0]>mean_value[2]){
+            tmp.color = BLUE;
+        }
+        else if(mean_value[1]>mean_value[2]){
+            tmp.color = GREEN;
+        }
+        else{
+            tmp.color = RED;
+        }
 
-        if(triangle.find(tmp.id) != triangle.end()) {
+        if(tmp.color == GREEN) {
             tmp.y += sin(tmp.yaw) * TRIANGLE_BASE/4; 
             tmp.x += cos(tmp.yaw) * TRIANGLE_BASE/4;
         }
-	    ROS_INFO("POS: x:%f y:%f", tmp.x, tmp.y);
+        ROS_INFO("POS: x:%f y:%f", tmp.x, tmp.y);
 
         apriltags_detected[tmp.id] = (tmp);
     }
@@ -285,19 +302,19 @@ void add_collision_objects(assignment2::apriltag_detect::Request tags){
         primitive.type = primitive.BOX;
         primitive.dimensions.resize(3);
 
-        if(prism.find(id_) != prism.end()){
+        if(tags.color[i]==BLUE){
             z_ -= PRISM_HEIGHT/2;
             height = PRISM_HEIGHT;
             width = PRISM_RADIUS;
             length = PRISM_RADIUS;
         }
-        else if(cube.find(id_) != cube.end()){
+        else if(tags.color[i]==RED){
             z_ -= CUBE_SIDE/2;
             height = CUBE_SIDE;
             width = CUBE_SIDE;
             length = CUBE_SIDE;
         }
-        else if(triangle.find(id_) != triangle.end()){
+        else if(tags.color[i]==RED){
             height = TRIANGLE_HEIGHT;
             width = TRIANGLE_LENGTH;
             length = TRIANGLE_BASE;
@@ -337,6 +354,7 @@ bool get_apriltags(assignment2::apriltag_detect::Request &req, assignment2::apri
         res.y.push_back(el.second.y);
         res.z.push_back(el.second.z);
         res.yaw.push_back(el.second.yaw);
+        res.color.push_back(el.second.color);
     }
     if(req.create_collisions){
         add_collision_objects(req);
