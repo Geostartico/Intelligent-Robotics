@@ -43,8 +43,8 @@ const float TABLE_1_Y = -1.96;
 const float TABLE_2_X = 7.82;
 const float TABLE_2_Y = -3.01;
 const int BLUE = 0;
-const int RED = 2;
-const int GREEN = 3;
+const int RED = 1;
+const int GREEN = 2;
 
 
 struct aprilmean{
