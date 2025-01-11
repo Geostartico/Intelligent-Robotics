@@ -24,7 +24,7 @@ std::set<int> triangle { 7, 8, 9};
 float PRISM_HEIGHT = 0.1;
 float PRISM_RADIUS = 0.05;
 float CUBE_SIDE = 0.05;
-float OBJ_PADDING = 0.05;
+float OBJ_PADDING = 0.04;
 //float OBJ_PADDING = 0.0;
 float TRIANGLE_BASE = 0.07;
 float TRIANGLE_HEIGHT = 0.035;
