@@ -288,8 +288,8 @@ void add_collision_objects(assignment2::apriltag_detect::Request tags){
 
     // Add the collision object to the planning scene
     std::vector<moveit_msgs::CollisionObject> collision_objects;
-    for(int i = 0; i < tags.ids.size(); i++){
-        int id_ = tags.ids[i];
+    for(int i = 0; i < tags.id.size(); i++){
+        int id_ = tags.id[i];
         float x_ = tags.x[i];
         float y_ = tags.y[i];
         float z_ = tags.z[i];
@@ -350,7 +350,7 @@ bool get_apriltags(assignment2::apriltag_detect::Request &req, assignment2::apri
     const apriltag_ros::AprilTagDetectionArray::ConstPtr msg = ros::topic::waitForMessage<apriltag_ros::AprilTagDetectionArray>("tag_detections", nh);
     std::map<int, aprilmean> apriltags_detected = detectionCallback(msg);
     for(auto el : apriltags_detected){
-        res.ids.push_back(el.second.id);
+        res.id.push_back(el.second.id);
         res.x.push_back(el.second.x);
         res.y.push_back(el.second.y);
         res.z.push_back(el.second.z);
