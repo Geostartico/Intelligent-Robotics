@@ -81,20 +81,20 @@ void add_collision_objs(std::map<int, apriltag_str> tags, ros::ServiceClient& ad
         ROS_INFO("Call to apriltags_detected_service: SUCCESSFUL.");
 }
 
-void remove_collision_obj(int id_picked) {
-    moveit::planning_interface::PlanningSceneInterface planningSceneInterface;
-    std::map<std::string, moveit_msgs::CollisionObject> colls = planningSceneInterface.getObjects();
-    if(id_picked!=-1) {
-        std::string object_id = "box_april_"+std::to_string(id_picked);
-        colls.erase(object_id);
-    }
-    std::vector<moveit_msgs::CollisionObject> to_remove;
-    for(auto it=colls.begin(); it!=colls.end(); it++){
-        to_remove.push_back(it->second);
-        it->second.operation=it->second.REMOVE;
-    }  
-    planningSceneInterface.applyCollisionObjects(to_remove);
-}
+// void remove_collision_obj(int id_picked) {
+//     moveit::planning_interface::PlanningSceneInterface planningSceneInterface;
+//     std::map<std::string, moveit_msgs::CollisionObject> colls = planningSceneInterface.getObjects();
+//     if(id_picked!=-1) {
+//         std::string object_id = "box_april_"+std::to_string(id_picked);
+//         colls.erase(object_id);
+//     }
+//     std::vector<moveit_msgs::CollisionObject> to_remove;
+//     for(auto it=colls.begin(); it!=colls.end(); it++){
+//         to_remove.push_back(it->second);
+//         it->second.operation=it->second.REMOVE;
+//     }  
+//     planningSceneInterface.applyCollisionObjects(to_remove);
+// }
 
 void put_down_routine(std::map<int, apriltag_str>& tags, int to_pick, apriltag_str table_tag, int& put_objs, float m, float q, Movement& mov, ros::ServiceClient& ad_client) {
     actionlib::SimpleActionClient<assignment2::ObjectMoveAction> ac("move_object", true);
@@ -141,7 +141,7 @@ void put_down_routine(std::map<int, apriltag_str>& tags, int to_pick, apriltag_s
     else
         ROS_WARN("Action did not finish before timeout.");
 
-    remove_collision_obj(tag.id);
+    // remove_collision_obj(tag.id);
     tags.erase(tag.id);
     
     std::pair<float, float> coords = compute_coord(table_tag.x, table_tag.y, put_objs, m, q);
@@ -182,7 +182,11 @@ void put_down_routine(std::map<int, apriltag_str>& tags, int to_pick, apriltag_s
         ROS_WARN("Action did not finish before timeout.");
     put_objs++;
 
-    remove_collision_obj(-1);
+    tag.x = put_down_x;
+    tag.y = put_down_y;
+    tag.yaw = 0.0;
+    tag.dock = closestDock;
+    tags[tag.id] = tag;
 }
 
 int main(int argc, char **argv) {

@@ -29,8 +29,8 @@ std::set<int> triangle { 7, 8, 9};
 float PRISM_HEIGHT = 0.1;
 float PRISM_RADIUS = 0.05;
 float CUBE_SIDE = 0.05;
-// float OBJ_PADDING = 0.05;
-float OBJ_PADDING = 0.0;
+float OBJ_PADDING = 0.05;
+//float OBJ_PADDING = 0.0;
 float TRIANGLE_BASE = 0.07;
 float TRIANGLE_HEIGHT = 0.035;
 float TRIANGLE_LENGTH = 0.05;
@@ -305,9 +305,9 @@ void add_collision_objects(assignment2::apriltag_detect::Request tags){
         else{
             continue;
         }
-        primitive.dimensions[primitive.BOX_X]= width + OBJ_PADDING/2; // Dimensions: X, Y, Z
-        primitive.dimensions[primitive.BOX_Y]= length + OBJ_PADDING/2; // Dimensions: X, Y, Z
-        primitive.dimensions[primitive.BOX_Z]= height + OBJ_PADDING/2; // Dimensions: X, Y, Z
+        primitive.dimensions[primitive.BOX_X]= width + OBJ_PADDING; // Dimensions: X, Y, Z
+        primitive.dimensions[primitive.BOX_Y]= length + OBJ_PADDING; // Dimensions: X, Y, Z
+        primitive.dimensions[primitive.BOX_Z]= height + OBJ_PADDING; // Dimensions: X, Y, Z
         // Define the pose of the object
         geometry_msgs::Pose box_pose;
         box_pose.position.x = x_;

@@ -23,8 +23,10 @@ const std::set<int> triangle { 7, 8, 9};
 const float APPRO = 0.30;
 const float OPENI = 0.10;
 const float CLOSEI = 0.02;
-const std::vector<double> HOME_JOINT_POSITION = {1.48, 1, 1.5, 1.56, -1, 1.39, 1.5};
-const std::vector<double> TUCKED_JOINT_POSITION = {0.200, -1.339, -0.200, 1.938, -1.570, 1.370, 0};
+//const std::vector<double> HOME_JOINT_POSITION_MEH = {1.48, 1, 1.5, 1.56, -1, 1.39, 1.5};
+const std::vector<double> HOME_JOINT_POSITION = {0.200, 1, -1.68, 1.533, -2, 1.39, 0.10};
+//const std::vector<double> HOME_JOINT_POSITION = {1.7, 1, 1.5, 2.25, -0.7, 1.2, 0.10};
+const std::vector<double> TUCKED_JOINT_POSITION = {0.200, -1.339, -0.200, 1.938, -1.570, 1.370, 1.2};
 typedef actionlib::SimpleActionServer<assignment2::ObjectMoveAction> Server;
 const std::map<int, std::string> id2model = {
     {1, "Hexagon"},
@@ -73,6 +75,7 @@ class ArmMovementServer{
                 geometry_msgs::Pose tgtPose = goal->tgt_pose;
                 tgtPose.position.z += APPRO;
                 moveArmToPoseTGT(moveGroup,plan,tgtPose);
+                remove_padding(goal->tgt_id);
                 // planningSceneInterface.removeCollisionObjects(tmp);
                 //ros::Duration(3.0).sleep();
                 tgtPose.position.z-= APPRO;
@@ -81,14 +84,17 @@ class ArmMovementServer{
 		        //tmp[0] =  "table_2";
                 //planningSceneInterface.removeCollisionObjects(tmp);
                 //ros::Duration(2.0).sleep();
-                attach_detach_object(goal->tgt_id,colls[object_id], true);
                 toggleGripper(false);
+                attach_detach_object(goal->tgt_id,colls[object_id], true);
                 tgtPose.position.z+= APPRO;
                 moveLinearTGT(moveGroup,plan,tgtPose);
                 //ros::Duration(2.0).sleep();
                 moveJointToPos(HOME_JOINT_POSITION);
-                moveJointToPos(TUCKED_JOINT_POSITION);
+                //moveJointToPos(TUCKED_JOINT_POSITION);
                 result_.success = true;
+                feedback_.status = {"Robot picked the piece."};
+                as.publishFeedback(feedback_);
+                as.setSucceeded(result_);
             } 
             else {
                 moveJointToPos(HOME_JOINT_POSITION);
@@ -110,6 +116,9 @@ class ArmMovementServer{
                 moveJointToPos(HOME_JOINT_POSITION);
                 moveJointToPos(TUCKED_JOINT_POSITION);
                 result_.success = true;
+                feedback_.status = {"Robot placed the piece."};
+                as.publishFeedback(feedback_);
+                as.setSucceeded(result_);
             }
         }
 
@@ -255,6 +264,24 @@ class ArmMovementServer{
             ROS_ERROR("no cartesian path available");
             return;
         }   
+        void remove_padding(int id){
+            moveit::planning_interface::PlanningSceneInterface planningSceneInterface;   
+            auto vec = planningSceneInterface.getObjects({"box_april_"+std::to_string(id)});
+            std::vector<moveit_msgs::CollisionObject> colls;
+            for(auto el : vec){
+		ROS_ERROR("OBJECT:%s",el.second.id.c_str());
+                auto elcol = el.second.primitives[0];
+		ROS_ERROR("DIMS:%f",el.second.primitives[0].dimensions[elcol.BOX_X]);
+                elcol.dimensions[elcol.BOX_X] -= 0.05;
+                elcol.dimensions[elcol.BOX_Y] -= 0.05;
+                elcol.dimensions[elcol.BOX_Z] -= 0.05;
+                el.second.operation = el.second.ADD;
+		el.second.primitives[0] = elcol;
+		ROS_ERROR("DIMS:%f",el.second.primitives[0].dimensions[elcol.BOX_X]);
+                colls.push_back(el.second);
+            }
+            planningSceneInterface.applyCollisionObjects(colls);
+        }
 };
 
 int main(int argc, char** argv) {
