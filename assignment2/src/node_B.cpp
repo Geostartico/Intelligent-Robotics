@@ -29,8 +29,6 @@ const std::set<int> triangle { 7, 8, 9};
 const float PRISM_HEIGHT = 0.1;
 const float PRISM_RADIUS = 0.05;
 const float CUBE_SIDE = 0.05;
-const float OBJ_PADDING = 0.05;
-//float OBJ_PADDING = 0.0;
 const float OBJ_PADDING = 0.04;
 const float TRIANGLE_BASE = 0.07;
 const float TRIANGLE_HEIGHT = 0.035;
@@ -315,7 +313,7 @@ void add_collision_objects(assignment2::apriltag_detect::Request tags){
             width = CUBE_SIDE;
             length = CUBE_SIDE;
         }
-        else if(tags.color[i]==RED){
+        else if(tags.color[i]==GREEN){
             height = TRIANGLE_HEIGHT;
             width = TRIANGLE_LENGTH;
             length = TRIANGLE_BASE;

@@ -1,5 +1,7 @@
 #include <ros/ros.h>
 #include <map>
+#include <cstdlib>
+#include <ctime>
 #include <numeric> 
 #include <string> 
 #include <tf2_ros/transform_listener.h>
@@ -19,6 +21,7 @@ struct apriltag_str{
     float z;
     float yaw;
     int id;
+    int color;
     int dock;
 };
 
@@ -62,16 +65,18 @@ void add_reference_collisions(float start_x, float start_y, float m, float q){
 void add_collision_objs(std::map<int, apriltag_str> tags, ros::ServiceClient& ad_client) {
     assignment2::apriltag_detect ad_srv_coll;
     ad_srv_coll.request.create_collisions = true;
-    std::vector<int> ids;
+    std::vector<int> ids, colors;
     std::vector<float> x, y, z, yaw;
     for(auto tag : tags) {
         ids.push_back(tag.second.id);
+        colors.push_back(tag.second.color);
         x.push_back(tag.second.x);
         y.push_back(tag.second.y);
         z.push_back(tag.second.z);
         yaw.push_back(tag.second.yaw);
     }
-    ad_srv_coll.request.ids = ids;
+    ad_srv_coll.request.id = ids;
+    ad_srv_coll.request.color = colors;
     ad_srv_coll.request.x = x;
     ad_srv_coll.request.y = y;
     ad_srv_coll.request.z = z;
@@ -117,7 +122,7 @@ void put_down_routine(std::map<int, apriltag_str>& tags, int to_pick, apriltag_s
     goal_pick.tgt_pose.position.z =  tag.z;
 
     tf2::Quaternion qt;
-    if(tag.id==7 || tag.id==8 || tag.id==9)
+    if(tag.color == 2) // Green objects
         qt.setRPY(0, M_PI_2, tag.yaw);
     else 
         qt.setRPY(0, M_PI_2, tag.yaw - M_PI_2);
@@ -211,7 +216,10 @@ int main(int argc, char **argv) {
 
     ROS_INFO("Line parameters, m:%f q:%f", coeffs[0], coeffs[1]);
 
-    ros::Duration wait_time(2.0);
+    srand(time(0));
+    const int COLOR_TO_PICK = rand()%3;
+    std::map<int, std::string> colorMap = {{0, "Blue"}, {1, "Red"}, {2, "Green"}};
+    ROS_INFO("Object color choosen to be picked: %s", colorMap[COLOR_TO_PICK].c_str());
 
     ROS_INFO("Initializing Movement object. Robot takes position at dock 2.");
     Movement mov;
@@ -220,8 +228,8 @@ int main(int argc, char **argv) {
 
     std::vector<apriltag_str> dock4, dock5, dock6;
     std::map<int, apriltag_str> tags;
-    apriltag_str table_tag{0,0,0,0,-1,-1};
-    apriltag_str to_move{0,0,0,0,-1,-1};
+    apriltag_str table_tag{0,0,0,0,-1,-1,-1};
+    apriltag_str to_move{0,0,0,0,-1,-1,-1};
     int put_objs = 0;
 
     for(int i=3; i<=6; i++) {
@@ -230,7 +238,7 @@ int main(int argc, char **argv) {
         else turns = {0.0, -M_PI_4/3, 2*M_PI_4/3};
 
         // REMOVE THIS
-        if(i==5 || i==6) continue;
+        // if(i==5 || i==6) continue;
 
         do {
             ROS_INFO("Moving to dock %u.", i);
@@ -240,7 +248,8 @@ int main(int argc, char **argv) {
                 assignment2::apriltag_detect ad_srv;
                 if(ad_client.call(ad_srv)) {
                     ROS_INFO("Call to apriltags_detected_service: SUCCESSFUL.");
-                    std::vector<int> ids = ad_srv.response.ids;
+                    std::vector<int> ids = ad_srv.response.id;
+                    std::vector<int> colors = ad_srv.response.color;
                     std::vector<float> x = ad_srv.response.x;
                     std::vector<float> y = ad_srv.response.y;
                     std::vector<float> z = ad_srv.response.z;
@@ -252,7 +261,7 @@ int main(int argc, char **argv) {
                                                 return a.empty() ? std::to_string(b) : a + ", " + std::to_string(b);
                                             }).c_str());
                     for(int j=0; j<ids.size(); j++) {
-                        apriltag_str tmp{x[j], y[j], z[j], yaw[j], ids[j], i};
+                        apriltag_str tmp{x[j], y[j], z[j], yaw[j], ids[j], colors[j], i};
                         if(ids[j]==10){
                             if(table_tag.dock==-1)
                                 table_tag = tmp;
@@ -282,7 +291,7 @@ int main(int argc, char **argv) {
             ROS_INFO("Object detection results:");
             ROS_INFO("Table (AprilTag 10) found at x=%f y=%f from dock %u", table_tag.x, table_tag.y, table_tag.dock);
             for(auto t : tags) 
-                ROS_INFO("AprilTag %u detected at x=%f y=%f from dock %u", t.second.id, t.second.x, t.second.y, t.second.dock);
+                ROS_INFO("AprilTag %u with color %u detected at x=%f y=%f from dock %u", t.second.id, t.second.color, t.second.x, t.second.y, t.second.dock);
 
             mov.fix_pos();
 
@@ -290,7 +299,7 @@ int main(int argc, char **argv) {
 
             to_move.id = -1;
             for(auto tag : tags)
-                if(to_move.id == -1 && tag.second.dock==i)
+                if(to_move.id == -1 && tag.second.dock==i && tag.second.color==COLOR_TO_PICK)
                     to_move = tag.second;
             if(to_move.id != -1) {
                 ROS_INFO("Starting the object placing routine.");
