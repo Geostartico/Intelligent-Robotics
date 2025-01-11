@@ -31,6 +31,7 @@ const float PRISM_RADIUS = 0.05;
 const float CUBE_SIDE = 0.05;
 const float OBJ_PADDING = 0.05;
 //float OBJ_PADDING = 0.0;
+const float OBJ_PADDING = 0.04;
 const float TRIANGLE_BASE = 0.07;
 const float TRIANGLE_HEIGHT = 0.035;
 const float TRIANGLE_LENGTH = 0.05;

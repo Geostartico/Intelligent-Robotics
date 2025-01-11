@@ -24,8 +24,8 @@ const float APPRO = 0.30;
 const float OPENI = 0.10;
 const float CLOSEI = 0.02;
 //const std::vector<double> HOME_JOINT_POSITION_MEH = {1.48, 1, 1.5, 1.56, -1, 1.39, 1.5};
-const std::vector<double> HOME_JOINT_POSITION = {0.200, 1, -1.68, 1.533, -2, 1.39, 0.10};
-//const std::vector<double> HOME_JOINT_POSITION = {1.7, 1, 1.5, 2.25, -0.7, 1.2, 0.10};
+//const std::vector<double> HOME_JOINT_POSITION = {0.200, 1, -1.68, 1.533, -2, 1.39, 0.10};
+const std::vector<double> HOME_JOINT_POSITION = {1.7, 1, 1.5, 2.25, -0.7, 1.2, 0.10};
 const std::vector<double> TUCKED_JOINT_POSITION = {0.200, -1.339, -0.200, 1.938, -1.570, 1.370, 1.2};
 typedef actionlib::SimpleActionServer<assignment2::ObjectMoveAction> Server;
 const std::map<int, std::string> id2model = {
@@ -51,7 +51,7 @@ class ArmMovementServer{
     
     public:
         ArmMovementServer(std::string name):as(nh_, name, boost::bind(&ArmMovementServer::movementOnGoal, this, _1), false),
-            action_name(name){as.start();}
+            action_name(name) {as.start();}
         
         void movementOnGoal(const assignment2::ObjectMoveGoal::ConstPtr &goal){
 
@@ -85,7 +85,10 @@ class ArmMovementServer{
                 //planningSceneInterface.removeCollisionObjects(tmp);
                 //ros::Duration(2.0).sleep();
                 toggleGripper(false);
-                attach_detach_object(goal->tgt_id,colls[object_id], true);
+                ros::Duration(4.0).sleep();
+                attach_detach_object_moveit(goal->tgt_id,colls[object_id], true);
+                attach_detach_object_gazebo(goal->tgt_id, true);
+                ros::Duration(2.0).sleep();
                 tgtPose.position.z+= APPRO;
                 moveLinearTGT(moveGroup,plan,tgtPose);
                 //ros::Duration(2.0).sleep();
@@ -107,7 +110,8 @@ class ArmMovementServer{
                 tgtPose.position.z+= 0.15;
                 moveLinearTGT(moveGroup,plan,tgtPose);
                 //ros::Duration(2.0).sleep();
-                attach_detach_object(goal->tgt_id,moveit_msgs::CollisionObject{}, false);
+                attach_detach_object_moveit(goal->tgt_id,moveit_msgs::CollisionObject{}, false);
+                attach_detach_object_gazebo(goal->tgt_id, false);
                 toggleGripper(true);
                 ros::Duration(1.0).sleep();
                 tgtPose.position.z+= APPRO;
@@ -137,26 +141,33 @@ class ArmMovementServer{
             return("error");
         }
 
+   
         // TO DO: CAMBIA I NOMI DEI MODELLI
-        void attach_detach_object(int id, moveit_msgs::CollisionObject coll, bool attach){
-            moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
-            ros::ServiceClient gazebo_attach = nh_.serviceClient<gazebo_ros_link_attacher::Attach>("/link_attacher_node/" + attach ? "attach" : "detach");
+        void attach_detach_object_gazebo(int id, bool attach){
+            ros::ServiceClient gazebo_attach = nh_.serviceClient<gazebo_ros_link_attacher::Attach>(
+                attach ? "/link_attacher_node/attach" : "/link_attacher_node/detach");
+
+            gazebo_attach.waitForExistence();
+            
             gazebo_ros_link_attacher::Attach attachRequest;
             attachRequest.request.model_name_1 = "tiago";
             attachRequest.request.link_name_1 = "arm_7_link";
-            //std::string objname = get_name(id) + "_" + std::to_string(id);
-            ROS_ERROR("ID2MODEL: %s", id2model.at(id).c_str());
+            if (id2model.find(id) == id2model.end()) {
+                ROS_ERROR("Invalid ID: %d", id);
+                return;
+            }
             attachRequest.request.model_name_2 = id2model.at(id);
             attachRequest.request.link_name_2 = id2model.at(id) +"_link" ;
-            ros::Duration(1.0).sleep();
-            bool status = gazebo_attach.call(attachRequest);
-            ros::Duration(2.0).sleep();
-            if(status){
+            
+            if(gazebo_attach.call(attachRequest)){
                 ROS_INFO("object attached/detached correctly in gazebo");
             }
             else{
                 ROS_ERROR("unable to complete attaching/detaching action in gazebo");
             }
+        }
+
+        void attach_detach_object_moveit(int id, moveit_msgs::CollisionObject coll, bool attach){
             //moveit part
             // if(attach){
             //     coll.operation = coll.ADD;
