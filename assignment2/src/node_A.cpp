@@ -222,7 +222,7 @@ int main(int argc, char **argv) {
     ROS_INFO("Object color choosen to be picked: %s", colorMap[COLOR_TO_PICK].c_str());
 
     ROS_INFO("Initializing Movement object. Robot takes position at dock 2.");
-    Movement mov;
+    Movement mov(n);
     // wait_time.sleep();
     ros::ServiceClient ad_client = n.serviceClient<assignment2::apriltag_detect>("apriltags_detected_service");
 

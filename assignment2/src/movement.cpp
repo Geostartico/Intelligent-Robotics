@@ -2,10 +2,14 @@
 #include <ros/ros.h>
 #include <geometry_msgs/Quaternion.h>
 #include <move_base_msgs/MoveBaseGoal.h>
+#include "sensor_msgs/LaserScan.h"
 #include <tf2_ros/transform_listener.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/TransformStamped.h>
 
 // Constructor
-Movement::Movement()
+Movement::Movement(ros::NodeHandle& nh)
     : POS_X_ORIENTATION([] {
           geometry_msgs::Quaternion q;
           q.x = 0.0; q.y = 0.0; q.z = 0.0; q.w = 1.0;  // 0° (Positive X)
@@ -30,6 +34,15 @@ Movement::Movement()
     // Wait for MoveBase server
     ac.waitForServer();
 
+    // Detect tables coordinates
+    sendGoalToMoveBase(MAX_CORRIDOR_X, 0.0, POS_X_ORIENTATION);
+    ros::Duration(1.0).sleep();
+    const sensor_msgs::LaserScan::ConstPtr scan_msg = ros::topic::waitForMessage<sensor_msgs::LaserScan>("/scan", nh);
+    detect_tables(scan_msg);
+    // tables_deteted = false;
+    // ros::Subscriber scan_sub_ = nh.subscribe<sensor_msgs::LaserScan>("/scan", 100, boost::bind(&Movement::detect_tables, this, _1));
+    // while(!tables_deteted) ros::spinOnce();
+
     // Initialize positions
     std::vector<std::pair<float, float>> docks_offsets = {
         {-DIST, 0}, {0, -DIST}, {DIST, 0}};
@@ -53,6 +66,119 @@ Movement::Movement()
     //cur_pos = 1;
     cur_pos = 2;
 }
+
+// Detect tables
+void Movement::detect_tables(const sensor_msgs::LaserScan::ConstPtr& msg) {
+    const float THR1 = 0.5;
+    const float THR2 = 0.3;
+
+    std::vector<std::vector<std::pair<float,float>>> points_proc;
+    std::vector<std::pair<float,float>> tmp;
+    points_proc.push_back(tmp);
+
+    int curr=0;
+    float r = msg->ranges[0];
+    float t = 0*msg->angle_increment;
+    float x_prev = r*std::cos(t);
+    float y_prev = r*std::sin(t);
+    points_proc[curr].push_back(std::make_pair(x_prev, y_prev));
+
+    for(int i=1; i<msg->ranges.size(); i++) {
+        float r = msg->ranges[i];
+        float t = i*msg->angle_increment + msg->angle_min;
+        float x = r*std::cos(t);
+        float y = r*std::sin(t);
+
+        float dist = std::pow(x-x_prev, 2) + std::pow(y-y_prev, 2);
+        if(dist > std::pow(THR1, 2)) {
+            std::vector<std::pair<float,float>> tmp;
+            points_proc.push_back(tmp);
+            curr++;
+        }
+        points_proc[curr].push_back(std::make_pair(x, y));
+        x_prev = x;
+        y_prev = y;
+    }
+
+    std::vector<int> table_idxs;
+    for(int i=0; i<points_proc.size(); i++) {
+        float x1 = points_proc[i][0].first;
+        float x2 = points_proc[i][points_proc[i].size()-1].first;
+        float y1 = points_proc[i][0].second;
+        float y2 = points_proc[i][points_proc[i].size()-1].second;
+        float dist = std::pow(x1-x2, 2) + std::pow(y1-y2, 2);
+        if(dist < std::pow(THR2, 2)) 
+            table_idxs.push_back(i);
+    }
+
+    if(table_idxs.size() < 2) 
+        ROS_ERROR("Less than 2 tables detected!");
+    else if(table_idxs.size() > 2)
+        ROS_WARN("More than 2 tables detected!");
+
+    tf2_ros::Buffer tf_buffer;
+    tf2_ros::TransformListener tf_listener(tf_buffer);
+    while(!tf_buffer.canTransform("map", "base_laser_link", ros::Time(0)))
+        ros::Duration(0.001).sleep();
+    geometry_msgs::TransformStamped transform = tf_buffer.lookupTransform("map", "base_laser_link", ros::Time(0), ros::Duration(1.0));
+
+    std::vector<std::pair<float,float>> tables_coord;
+    for(int i: table_idxs) {
+        float x = 0.0;
+        float y = 0.0;
+        // for(auto& point : points_proc[i]) {
+        //     x += point.first;
+        //     y += point.second;
+        // }
+        // x /= points_proc[i].size();
+        // y /= points_proc[i].size();
+        x += points_proc[i][0].first;
+        x += points_proc[i][points_proc[i].size()-1].first;
+        x /= 2;
+        y += points_proc[i][0].second;
+        y += points_proc[i][points_proc[i].size()-1].second;
+        y /= 2;
+
+        geometry_msgs::PoseStamped base_link_point;
+        base_link_point.header.frame_id = "base_laser_link";
+        base_link_point.header.stamp = ros::Time::now();
+        base_link_point.pose.position.x = x;  
+        base_link_point.pose.position.y = y;  
+        base_link_point.pose.position.z = 0.0;
+        base_link_point.pose.orientation.x = 0.0;
+        base_link_point.pose.orientation.y = 0.0;
+        base_link_point.pose.orientation.z = 0.0;
+        base_link_point.pose.orientation.w = 1.0;
+        geometry_msgs::PoseStamped map_point;
+        tf2::doTransform(base_link_point, map_point, transform);
+
+        tables_coord.push_back(std::make_pair(map_point.pose.position.x, map_point.pose.position.y));
+        // ROS_INFO("Table found at x=%f y=%f", map_point.pose.position.x, map_point.pose.position.y);
+    }
+
+    tables_coord.erase(tables_coord.begin());
+    tables_coord.erase(tables_coord.end()-1);
+    std::pair<float, float> table_1, table_2;
+    float dist1 = std::pow(tables_coord[0].first, 2) + std::pow(tables_coord[0].second, 2);
+    float dist2 = std::pow(tables_coord[1].first, 2) + std::pow(tables_coord[1].second, 2);
+    if(dist1 < dist2) {
+        table_1 = tables_coord[0];
+        table_2 = tables_coord[1];
+    }
+    else {
+        table_1 = tables_coord[1];
+        table_2 = tables_coord[0];
+    }
+
+    TABLE_1_X = table_1.first;
+    TABLE_1_Y = table_1.second;
+    TABLE_2_X = table_2.first;
+    TABLE_2_Y = table_2.second;
+
+    ROS_INFO("Table 1: x=%f y=%f", TABLE_1_X, TABLE_1_Y);
+    ROS_INFO("Table 2: x=%f y=%f", TABLE_2_X, TABLE_2_Y);
+}
+
 
 // Send goal to MoveBase
 void Movement::sendGoalToMoveBase(double x, double y, const geometry_msgs::Quaternion& orientation) {

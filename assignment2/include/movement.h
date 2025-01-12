@@ -5,22 +5,29 @@
 #include <move_base_msgs/MoveBaseAction.h>
 #include <actionlib/client/simple_action_client.h>
 #include <geometry_msgs/Quaternion.h>
+#include "sensor_msgs/LaserScan.h"
 #include <vector>
 
 typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
 
 class Movement {
 private:
-    static constexpr float TABLE_1_X = 7.82;
-    static constexpr float TABLE_1_Y = -1.96;
-    static constexpr float TABLE_2_X = 7.82;
-    static constexpr float TABLE_2_Y = -3.01;
+    // static constexpr float TABLE_1_X = 7.82;
+    // static constexpr float TABLE_1_Y = -1.96;
+    // static constexpr float TABLE_2_X = 7.82;
+    // static constexpr float TABLE_2_Y = -3.01;
+    static constexpr float MAX_CORRIDOR_X = 6.66;
     static constexpr float DIST = 0.9;
 
     const geometry_msgs::Quaternion POS_X_ORIENTATION;
     const geometry_msgs::Quaternion POS_Y_ORIENTATION;
     const geometry_msgs::Quaternion NEG_X_ORIENTATION;
     const geometry_msgs::Quaternion NEG_Y_ORIENTATION;
+
+    float TABLE_1_X;
+    float TABLE_1_Y;
+    float TABLE_2_X;
+    float TABLE_2_Y;
 
     int cur_pos;
     std::vector<std::pair<float, float>> docks;
@@ -32,7 +39,8 @@ private:
     void sendGoalToMoveBase(double x, double y, const geometry_msgs::Quaternion& orientation);
 
 public:
-    Movement();
+    Movement(ros::NodeHandle& nh);
+    void detect_tables(const sensor_msgs::LaserScan::ConstPtr& msg);
     void goAround(int target_pos);
     void fix_pos();
     void spin(double yaw);
