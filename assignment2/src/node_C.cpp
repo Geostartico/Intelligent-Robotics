@@ -51,7 +51,10 @@ class ArmMovementServer{
     
     public:
         ArmMovementServer(std::string name):as(nh_, name, boost::bind(&ArmMovementServer::movementOnGoal, this, _1), false),
-            action_name(name) {as.start();}
+            action_name(name) {
+                as.start();
+                moveJointToPos(HOME_JOINT_POSITION);
+                }
         
         void movementOnGoal(const assignment2::ObjectMoveGoal::ConstPtr &goal){
 
@@ -85,7 +88,7 @@ class ArmMovementServer{
                 //planningSceneInterface.removeCollisionObjects(tmp);
                 //ros::Duration(2.0).sleep();
                 toggleGripper(false);
-                ros::Duration(4.0).sleep();
+                ros::Duration(1.0).sleep();
                 attach_detach_object_moveit(goal->tgt_id,colls[object_id], true);
                 attach_detach_object_gazebo(goal->tgt_id, true);
                 ros::Duration(2.0).sleep();
@@ -113,12 +116,12 @@ class ArmMovementServer{
                 attach_detach_object_moveit(goal->tgt_id,moveit_msgs::CollisionObject{}, false);
                 attach_detach_object_gazebo(goal->tgt_id, false);
                 toggleGripper(true);
-                ros::Duration(1.0).sleep();
+                ros::Duration(2.0).sleep();
                 tgtPose.position.z+= APPRO;
                 moveLinearTGT(moveGroup,plan,tgtPose);
                 //ros::Duration(2.0).sleep();
                 moveJointToPos(HOME_JOINT_POSITION);
-                moveJointToPos(TUCKED_JOINT_POSITION);
+                //moveJointToPos(TUCKED_JOINT_POSITION);
                 result_.success = true;
                 feedback_.status = {"Robot placed the piece."};
                 as.publishFeedback(feedback_);
@@ -299,7 +302,7 @@ int main(int argc, char** argv) {
     ros::init(argc, argv, "ArmMovementServer");
     ros::AsyncSpinner spinner(1);
     spinner.start();
-
+    
     ArmMovementServer move_object("move_object");
     ros::waitForShutdown();
     return 0;

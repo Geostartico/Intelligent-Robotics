@@ -192,7 +192,6 @@ void Movement::sendGoalToMoveBase(double x, double y, const geometry_msgs::Quate
 
     //ROS_INFO("Sending goal: x=%.2f, y=%.2f, orientation=[%.2f, %.2f, %.2f, %.2f]",
     //         x, y, orientation.x, orientation.y, orientation.z, orientation.w);
-
     ac.sendGoal(goal);
     if (ac.waitForResult(ros::Duration(20))) {
         if (ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED) {
@@ -201,6 +200,7 @@ void Movement::sendGoalToMoveBase(double x, double y, const geometry_msgs::Quate
             ROS_WARN("Failed to reach the goal.");
         }
     }
+    ros::Duration(0.2).sleep();
 }
 
 // Clockwise movement
