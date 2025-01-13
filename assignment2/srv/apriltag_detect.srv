@@ -5,6 +5,10 @@ float32[] y
 float32[] z
 float32[] yaw
 int32[] color
+float32 table_1_x
+float32 table_1_y
+float32 table_2_x
+float32 table_2_y
 ---
 int32[] id
 float32[] x

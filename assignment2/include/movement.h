@@ -24,11 +24,6 @@ private:
     const geometry_msgs::Quaternion NEG_X_ORIENTATION;
     const geometry_msgs::Quaternion NEG_Y_ORIENTATION;
 
-    float TABLE_1_X;
-    float TABLE_1_Y;
-    float TABLE_2_X;
-    float TABLE_2_Y;
-
     int cur_pos;
     std::vector<std::pair<float, float>> docks;
     std::vector<std::pair<float, float>> corns;
@@ -39,6 +34,11 @@ private:
     void sendGoalToMoveBase(double x, double y, const geometry_msgs::Quaternion& orientation);
 
 public:
+    float TABLE_1_X;
+    float TABLE_1_Y;
+    float TABLE_2_X;
+    float TABLE_2_Y;
+
     Movement(ros::NodeHandle& nh);
     void detect_tables(const sensor_msgs::LaserScan::ConstPtr& msg);
     void goAround(int target_pos);

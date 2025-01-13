@@ -36,10 +36,10 @@ const float TRIANGLE_LENGTH = 0.05;
 const float TABLE_SIDE = 0.9;
 const float TABLE_HEIGHT = 0.775;
 const float TABLE_PADDING = 0.2;
-const float TABLE_1_X = 7.82;
-const float TABLE_1_Y = -1.96;
-const float TABLE_2_X = 7.82;
-const float TABLE_2_Y = -3.01;
+//const float TABLE_1_X = 7.82;
+//const float TABLE_1_Y = -1.96;
+//const float TABLE_2_X = 7.82;
+//const float TABLE_2_Y = -3.01;
 const int BLUE = 0;
 const int RED = 1;
 const int GREEN = 2;
@@ -229,7 +229,7 @@ void move_torso(){
 */
 
 
-void add_tables(){
+void add_tables(float table_1_x,float table_1_y,float table_2_x,float table_2_y){
     std::vector<moveit_msgs::CollisionObject> collision_objects;
     moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
     moveit_msgs::CollisionObject collision_object1;
@@ -243,8 +243,8 @@ void add_tables(){
     primitive1.dimensions[primitive1.BOX_Y]= TABLE_SIDE + TABLE_PADDING; // Dimensions: X, Y, Z
     primitive1.dimensions[primitive1.BOX_Z]= TABLE_HEIGHT; // Dimensions: X, Y, Z
     geometry_msgs::Pose box_pose1;
-    box_pose1.position.x = TABLE_1_X;
-    box_pose1.position.y = TABLE_1_Y;
+    box_pose1.position.x = table_1_x;
+    box_pose1.position.y = table_1_y;
     box_pose1.position.z = TABLE_HEIGHT/2;
     box_pose1.orientation.w = 1.0;
     collision_object1.primitives.push_back(primitive1);
@@ -262,8 +262,8 @@ void add_tables(){
     primitive2.dimensions[primitive2.BOX_Y]= TABLE_SIDE + TABLE_PADDING; // / Dimensions: X, Y, Z
     primitive2.dimensions[primitive2.BOX_Z]= TABLE_HEIGHT; // Dimensions: X, Y, Z
     geometry_msgs::Pose box_pose2;
-    box_pose2.position.x = TABLE_2_X;
-    box_pose2.position.y = TABLE_2_Y;
+    box_pose2.position.x = table_2_x;
+    box_pose2.position.y = table_2_y;
     box_pose2.position.z = TABLE_HEIGHT/2;
     box_pose2.orientation.w = 1.0;
     collision_object2.primitives.push_back(primitive2);
@@ -273,7 +273,7 @@ void add_tables(){
 }
 
 void add_collision_objects(assignment2::apriltag_detect::Request tags){
-    add_tables();
+    add_tables(tags.table_1_x,tags.table_1_y,tags.table_2_x,tags.table_2_y);
     moveit::planning_interface::MoveGroupInterface move_group("arm_torso");
     ROS_INFO("%s",move_group.getPlanningFrame().c_str());
     // Create a PlanningSceneInterface object

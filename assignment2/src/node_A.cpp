@@ -62,7 +62,7 @@ void add_reference_collisions(float start_x, float start_y, float m, float q){
 
 }
 
-void add_collision_objs(std::map<int, apriltag_str> tags, ros::ServiceClient& ad_client) {
+void add_collision_objs(std::map<int, apriltag_str> tags, ros::ServiceClient& ad_client, Movement& mov) {
     assignment2::apriltag_detect ad_srv_coll;
     ad_srv_coll.request.create_collisions = true;
     std::vector<int> ids, colors;
@@ -81,6 +81,11 @@ void add_collision_objs(std::map<int, apriltag_str> tags, ros::ServiceClient& ad
     ad_srv_coll.request.y = y;
     ad_srv_coll.request.z = z;
     ad_srv_coll.request.yaw = yaw;
+    ad_srv_coll.request.table_1_x = mov.TABLE_1_X;
+    ad_srv_coll.request.table_1_y = mov.TABLE_1_Y;
+    ad_srv_coll.request.table_2_x = mov.TABLE_2_X;
+    ad_srv_coll.request.table_2_y = mov.TABLE_2_Y;
+    
     ROS_INFO("Creating collision objects from detections.");
     if(ad_client.call(ad_srv_coll))
         ROS_INFO("Call to apriltags_detected_service: SUCCESSFUL.");
@@ -112,7 +117,7 @@ void put_down_routine(std::map<int, apriltag_str>& tags, int to_pick, apriltag_s
     ROS_INFO("Picking up object with AprilTag %u at x=%f y=%f from dock %u.", tag.id, tag.x, tag.y, tag.dock);
     mov.goAround(tag.dock);
 
-    add_collision_objs(tags, ad_client);
+    add_collision_objs(tags, ad_client, mov);
 
     assignment2::ObjectMoveGoal goal_pick;
     goal_pick.pick = true;
@@ -159,7 +164,7 @@ void put_down_routine(std::map<int, apriltag_str>& tags, int to_pick, apriltag_s
     ROS_INFO("Placing down object with AprilTag %u in x=%f y=%f from dock %u", tag.id, put_down_x, put_down_y, closestDock);
     mov.goAround(closestDock);
 
-    add_collision_objs(tags, ad_client);
+    add_collision_objs(tags, ad_client, mov);
     
     assignment2::ObjectMoveGoal goal_place;
     goal_place.pick = false;
