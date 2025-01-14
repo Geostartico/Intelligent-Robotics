@@ -33,14 +33,16 @@ std::pair<float,float> compute_coord(float start_x, float start_y, int count, fl
     float x_step = (TABLE_SIDE - PADDING - q) / ((3 + EXTRA) * m);
     float tgt_x = ((count + 1+EXTRA) * x_step);
     float tgt_y = ((count + 1+EXTRA) * x_step) * m - q;
-    return std::make_pair(start_x + cos(yaw)*(tgt_x - start_x) - sin(yaw)*(tgt_y - start_y), start_y + sin(yaw)*(tgt_x - start_x) + cos(yaw)*(tgt_y - start_y));
+    return std::make_pair(start_x +cos(yaw)*(tgt_x) - sin(yaw)*(tgt_y) , start_y + sin(yaw)*(tgt_x) + cos(yaw)*(tgt_y));
 }
 
 void add_reference_collisions(float start_x, float start_y, float m, float q, float yaw){
     std::vector<moveit_msgs::CollisionObject> collision_objects;
     moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
+    ROS_INFO("YAW %f",yaw);
     for(int i = 0; i < 3; i++){
         auto coords = compute_coord(start_x, start_y, i, m, q, yaw);
+	ROS_INFO("OBJECTIVE %d at x:%f, y:%f",i,coords.first,coords.second);
         moveit_msgs::CollisionObject collision_object;
         collision_object.operation = collision_object.ADD;
         collision_object.id = "reference_obj_"+std::to_string(i);
