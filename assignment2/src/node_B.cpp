@@ -86,6 +86,10 @@ std::map<int,aprilmean> detectionCallback(const apriltag_ros::AprilTagDetectionA
         cv::Point2d center = camera_model.project3dToPixel(cv::Point3d{x,y,z});
         int x_center = center.x;
         int y_center = center.y;
+        if(x_center < 0 || x_center >= img.cols || y_center < 0 || y_center >= img.rows){
+            sensor_msgs::CameraInfoConstPtr caminfo = ros::topic::waitForMessage<sensor_msgs::CameraInfo>("/xtion/rgb/camera_info", nh);
+            camera_model.fromCameraInfo(caminfo);
+        }
         ROS_INFO("center: x=%d, y=%d",
                 x_center, y_center);
         bool found = false;

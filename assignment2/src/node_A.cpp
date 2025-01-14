@@ -28,17 +28,19 @@ struct apriltag_str{
 const float TABLE_SIDE = 0.85;
 const float PADDING    = 0.1;
 
-std::pair<float,float> compute_coord(float start_x, float start_y, int count, float m, float q){
+std::pair<float,float> compute_coord(float start_x, float start_y, int count, float m, float q, float yaw){
     const int EXTRA = 2;
     float x_step = (TABLE_SIDE - PADDING - q) / ((3 + EXTRA) * m);
-    return std::make_pair(start_x - ((count + 1+EXTRA) * x_step) * m - q, start_y + ((count + 1+EXTRA) * x_step));
+    float tgt_x = ((count + 1+EXTRA) * x_step);
+    float tgt_y = ((count + 1+EXTRA) * x_step) * m - q;
+    return std::make_pair(start_x + cos(yaw)*(tgt_x - start_x) - sin(yaw)*(tgt_y - start_y), start_y + sin(yaw)*(tgt_x - start_x) + cos(yaw)*(tgt_y - start_y));
 }
 
-void add_reference_collisions(float start_x, float start_y, float m, float q){
+void add_reference_collisions(float start_x, float start_y, float m, float q, float yaw){
     std::vector<moveit_msgs::CollisionObject> collision_objects;
     moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
     for(int i = 0; i < 3; i++){
-        auto coords = compute_coord(start_x, start_y, i, m, q);
+        auto coords = compute_coord(start_x, start_y, i, m, q, yaw);
         moveit_msgs::CollisionObject collision_object;
         collision_object.operation = collision_object.ADD;
         collision_object.id = "reference_obj_"+std::to_string(i);
@@ -154,7 +156,7 @@ void put_down_routine(std::map<int, apriltag_str>& tags, int to_pick, apriltag_s
     // remove_collision_obj(tag.id);
     tags.erase(tag.id);
     
-    std::pair<float, float> coords = compute_coord(table_tag.x, table_tag.y, put_objs, m, q);
+    std::pair<float, float> coords = compute_coord(table_tag.x, table_tag.y, put_objs, m, q, table_tag.yaw);
     float put_down_y = coords.second;
     float put_down_x = coords.first;
 
@@ -299,8 +301,8 @@ int main(int argc, char **argv) {
                 ROS_INFO("AprilTag %u with color %u detected at x=%f y=%f from dock %u", t.second.id, t.second.color, t.second.x, t.second.y, t.second.dock);
 
             mov.fix_pos();
+            add_reference_collisions(table_tag.x, table_tag.y, coeffs[0], coeffs[1], table_tag.yaw);
 
-            // add_reference_collisions(table_tag.x, table_tag.y, coeffs[0], coeffs[1]);
 
             to_move.id = -1;
             for(auto tag : tags)
