@@ -226,7 +226,7 @@ int main(int argc, char **argv) {
     std::map<int, std::string> colorMap = {{0, "Blue"}, {1, "Red"}, {2, "Green"}};
     ROS_INFO("Object color choosen to be picked: %s", colorMap[COLOR_TO_PICK].c_str());
 
-    ROS_INFO("Initializing Movement object. Robot takes position at dock 2.");
+    // ROS_INFO("Initializing Movement object. Robot takes position at dock 2.");
     Movement mov(n);
     // wait_time.sleep();
     ros::ServiceClient ad_client = n.serviceClient<assignment2::apriltag_detect>("apriltags_detected_service");

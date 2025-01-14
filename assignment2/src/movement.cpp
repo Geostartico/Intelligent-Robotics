@@ -35,24 +35,26 @@ Movement::Movement(ros::NodeHandle& nh)
     ac.waitForServer();
 
     // Detect tables coordinates
+    ROS_INFO("Robot traverses the corridor.");
     sendGoalToMoveBase(MAX_CORRIDOR_X, 0.0, POS_X_ORIENTATION);
     ros::Duration(1.0).sleep();
+
+    ROS_INFO("Robot starts the tables detection.");
     const sensor_msgs::LaserScan::ConstPtr scan_msg = ros::topic::waitForMessage<sensor_msgs::LaserScan>("/scan", nh);
     detect_tables(scan_msg);
-    // tables_deteted = false;
-    // ros::Subscriber scan_sub_ = nh.subscribe<sensor_msgs::LaserScan>("/scan", 100, boost::bind(&Movement::detect_tables, this, _1));
-    // while(!tables_deteted) ros::spinOnce();
 
     // Initialize positions
-    std::vector<std::pair<float, float>> docks_offsets = {
-        {-DIST, 0}, {0, -DIST}, {DIST, 0}};
+    std::vector<std::pair<float, float>> docks_offsets_1 = {
+        {-DIST_1, 0}, {0, -DIST_1}, {DIST_1, 0}};
+    std::vector<std::pair<float, float>> docks_offsets_2 = {
+        {-DIST_2, 0}, {0, -DIST_2}, {DIST_2, 0}};
     std::vector<std::pair<float, float>> corns_offsets = {
-        {-DIST, DIST}, {DIST, DIST}};
+        {-DIST_2, DIST_2}, {DIST_2, DIST_2}};
 
     // Set up dock and corner positions
-    for (auto off : docks_offsets)
+    for (auto off : docks_offsets_1)
         docks.emplace_back(TABLE_1_X + off.first, TABLE_1_Y - off.second);
-    for (auto off : docks_offsets)
+    for (auto off : docks_offsets_2)
         docks.emplace_back(TABLE_2_X - off.first, TABLE_2_Y + off.second);
     for (auto off : corns_offsets)
         corns.emplace_back(TABLE_1_X + off.first, TABLE_1_Y + off.second);
@@ -60,10 +62,8 @@ Movement::Movement(ros::NodeHandle& nh)
         corns.emplace_back(TABLE_2_X - off.first, TABLE_2_Y - off.second);
 
     // Move to initial position
-    //sendGoalToMoveBase(docks[0].first, 0.0, NEG_Y_ORIENTATION);
-    //sendGoalToMoveBase(docks[0].first, docks[0].second, POS_X_ORIENTATION);
+    ROS_INFO("Moving to the initial position (dock 2).");
     sendGoalToMoveBase(docks[1].first, docks[1].second, NEG_Y_ORIENTATION);
-    //cur_pos = 1;
     cur_pos = 2;
 }
 
@@ -110,11 +110,6 @@ void Movement::detect_tables(const sensor_msgs::LaserScan::ConstPtr& msg) {
         if(dist < std::pow(THR2, 2)) 
             table_idxs.push_back(i);
     }
-
-    if(table_idxs.size() < 2) 
-        ROS_ERROR("Less than 2 tables detected!");
-    else if(table_idxs.size() > 2)
-        ROS_WARN("More than 2 tables detected!");
 
     tf2_ros::Buffer tf_buffer;
     tf2_ros::TransformListener tf_listener(tf_buffer);
@@ -179,7 +174,6 @@ void Movement::detect_tables(const sensor_msgs::LaserScan::ConstPtr& msg) {
     ROS_INFO("Table 2: x=%f y=%f", TABLE_2_X, TABLE_2_Y);
 }
 
-
 // Send goal to MoveBase
 void Movement::sendGoalToMoveBase(double x, double y, const geometry_msgs::Quaternion& orientation) {
     move_base_msgs::MoveBaseGoal goal;
@@ -218,60 +212,38 @@ void Movement::go_clockwise(int target_pos) {
         if(cur_pos==6) {
             cur_pos=1;
             sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, POS_Y_ORIENTATION);
-            if(target_pos==1){
-                sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, POS_X_ORIENTATION);
-                return;
-            }
         }
-        if(cur_pos==1) {
+        else if(cur_pos==1) {
             sendGoalToMoveBase(corns[0].first, corns[0].second, POS_Y_ORIENTATION);
             sendGoalToMoveBase(corns[0].first, corns[0].second, POS_X_ORIENTATION);
             cur_pos++;
             sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, POS_X_ORIENTATION);
-            if(target_pos==2){
-                sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_Y_ORIENTATION);
-                return;
-            }
         }
-        if(cur_pos==2) {
+        else if(cur_pos==2) {
             sendGoalToMoveBase(corns[1].first, corns[1].second, POS_X_ORIENTATION);
             sendGoalToMoveBase(corns[1].first, corns[1].second, NEG_Y_ORIENTATION);
             cur_pos++;
             sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_Y_ORIENTATION);
-            if(target_pos==3){
-                sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_X_ORIENTATION);
-                return;
-            }
         }
-        if(cur_pos==3) {
+        else if(cur_pos==3) {
             cur_pos++;
             sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_Y_ORIENTATION);
-            if(target_pos==4){
-                sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_X_ORIENTATION);
-                return;
-            }
         }
-        if(cur_pos==4) {
+        else if(cur_pos==4) {
             sendGoalToMoveBase(corns[2].first, corns[2].second, NEG_Y_ORIENTATION);
             sendGoalToMoveBase(corns[2].first, corns[2].second, NEG_X_ORIENTATION);
             cur_pos++;
             sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_X_ORIENTATION);
-            if(target_pos==5){
-                sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, POS_Y_ORIENTATION);
-                return;
-            }
         }
-        if(cur_pos==5) {
+        else if(cur_pos==5) {
             sendGoalToMoveBase(corns[3].first, corns[3].second, NEG_X_ORIENTATION);
             sendGoalToMoveBase(corns[3].first, corns[3].second, POS_Y_ORIENTATION);
             cur_pos++;
             sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, POS_Y_ORIENTATION);
-            if(target_pos==6){
-                sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, POS_X_ORIENTATION);
-                return;
-            }
         }
     }
+
+    fix_pos();
 }
 
 // Counter-clockwise movement
@@ -289,60 +261,38 @@ void Movement::go_counter_clockwise(int target_pos) {
         if(cur_pos==1) {
             cur_pos=6;
             sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_Y_ORIENTATION);
-            if(target_pos==6){
-                sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, POS_X_ORIENTATION);
-                return;
-            }
         }
-        if(cur_pos==6) {
+        else if(cur_pos==6) {
             sendGoalToMoveBase(corns[3].first, corns[3].second, NEG_Y_ORIENTATION);
             sendGoalToMoveBase(corns[3].first, corns[3].second, POS_X_ORIENTATION);
             cur_pos--;
             sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, POS_X_ORIENTATION);
-            if(target_pos==5){
-                sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, POS_Y_ORIENTATION);
-                return;
-            }
         }
-        if(cur_pos==5) {
+        else if(cur_pos==5) {
             sendGoalToMoveBase(corns[2].first, corns[2].second, POS_X_ORIENTATION);
             sendGoalToMoveBase(corns[2].first, corns[2].second, POS_Y_ORIENTATION);
             cur_pos--;
             sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, POS_Y_ORIENTATION);
-            if(target_pos==4){
-                sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_X_ORIENTATION);
-                return;
-            }
         }
-        if(cur_pos==4) {
+        else if(cur_pos==4) {
             cur_pos--;
             sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, POS_Y_ORIENTATION);
-            if(target_pos==3){
-                sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_X_ORIENTATION);
-                return;
-            }
         }
-        if(cur_pos==3) {
+        else if(cur_pos==3) {
             sendGoalToMoveBase(corns[1].first, corns[1].second, POS_Y_ORIENTATION);
             sendGoalToMoveBase(corns[1].first, corns[1].second, NEG_X_ORIENTATION);
             cur_pos--;
             sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_Y_ORIENTATION);
-            if(target_pos==2){
-                sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_Y_ORIENTATION);
-                return;
-            }
         }
-        if(cur_pos==2) {
+        else if(cur_pos==2) {
             sendGoalToMoveBase(corns[0].first, corns[0].second, NEG_X_ORIENTATION);
             sendGoalToMoveBase(corns[0].first, corns[0].second, NEG_Y_ORIENTATION);
             cur_pos--;
             sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_Y_ORIENTATION);
-            if(target_pos==1){
-                sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, POS_X_ORIENTATION);
-                return;
-            }
         }
     }
+
+    fix_pos();
 }
 
 // Navigate to target position

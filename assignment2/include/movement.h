@@ -17,7 +17,8 @@ private:
     // static constexpr float TABLE_2_X = 7.82;
     // static constexpr float TABLE_2_Y = -3.01;
     static constexpr float MAX_CORRIDOR_X = 6.66;
-    static constexpr float DIST = 0.9;
+    static constexpr float DIST_1 = 0.9;
+    static constexpr float DIST_2 = 0.95;
 
     const geometry_msgs::Quaternion POS_X_ORIENTATION;
     const geometry_msgs::Quaternion POS_Y_ORIENTATION;
