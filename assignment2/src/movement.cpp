@@ -165,9 +165,9 @@ void Movement::detect_tables(const sensor_msgs::LaserScan::ConstPtr& msg) {
         table_2 = tables_coord[0];
     }
 
-    TABLE_1_X = table_1.first;
+    TABLE_1_X = (table_1.first + table_2.first) / 2;
     TABLE_1_Y = table_1.second;
-    TABLE_2_X = table_2.first;
+    TABLE_2_X = (table_1.first + table_2.first) / 2;
     TABLE_2_Y = table_2.second;
 
     ROS_INFO("Table 1: x=%f y=%f", TABLE_1_X, TABLE_1_Y);
