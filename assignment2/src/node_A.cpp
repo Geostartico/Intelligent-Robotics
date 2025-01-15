@@ -176,7 +176,7 @@ void put_down_routine(std::map<int, apriltag_str>& tags, int to_pick, apriltag_s
     goal_place.tgt_pose.position.x =  put_down_x;
     goal_place.tgt_pose.position.y =  put_down_y;
     goal_place.tgt_pose.position.z =  tag.z;
-    qt.setRPY(0, M_PI_2, 0);
+    qt.setRPY(0, M_PI_2, -M_PI_2);
     goal_place.tgt_pose.orientation.w = qt.w();
     goal_place.tgt_pose.orientation.x = qt.x();
     goal_place.tgt_pose.orientation.y = qt.y();
