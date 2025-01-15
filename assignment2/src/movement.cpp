@@ -39,16 +39,29 @@ Movement::Movement(ros::NodeHandle& nh)
     sendGoalToMoveBase(MAX_CORRIDOR_X, 0.0, POS_X_ORIENTATION);
     ros::Duration(1.0).sleep();
 
-    ROS_INFO("Robot starts the tables detection.");
-    const sensor_msgs::LaserScan::ConstPtr scan_msg = ros::topic::waitForMessage<sensor_msgs::LaserScan>("/scan", nh);
-    detect_tables(scan_msg);
+    ROS_INFO("Robot starts the first tables detection (raw).");
+    const sensor_msgs::LaserScan::ConstPtr scan_msg_1 = ros::topic::waitForMessage<sensor_msgs::LaserScan>("/scan", nh);
+    detect_tables(scan_msg_1);
+
+    // Detect tables coordinates
+    ROS_INFO("Robot goes to second detection point.");
+    spin(-M_PI_2);
+    sendGoalToMoveBase(MAX_CORRIDOR_X, (TABLE_1_Y+TABLE_2_Y)/2, NEG_Y_ORIENTATION);
+    spin(M_PI_2);
+    ros::Duration(1.0).sleep();
+
+    ROS_INFO("Robot starts the second tables detection (refined).");
+    const sensor_msgs::LaserScan::ConstPtr scan_msg_2 = ros::topic::waitForMessage<sensor_msgs::LaserScan>("/scan", nh);
+    detect_tables(scan_msg_2);
 
     // Initialize positions
     std::vector<std::pair<float, float>> docks_offsets_1 = {
         {-DIST_1, 0}, {0, -DIST_1}, {DIST_1, 0}};
     std::vector<std::pair<float, float>> docks_offsets_2 = {
         {-DIST_2, 0}, {0, -DIST_2}, {DIST_2, 0}};
-    std::vector<std::pair<float, float>> corns_offsets = {
+    std::vector<std::pair<float, float>> corns_offsets_1 = {
+        {-DIST_1, DIST_1}, {DIST_1, DIST_1}};
+    std::vector<std::pair<float, float>> corns_offsets_2 = {
         {-DIST_2, DIST_2}, {DIST_2, DIST_2}};
 
     // Set up dock and corner positions
@@ -56,20 +69,22 @@ Movement::Movement(ros::NodeHandle& nh)
         docks.emplace_back(TABLE_1_X + off.first, TABLE_1_Y - off.second);
     for (auto off : docks_offsets_2)
         docks.emplace_back(TABLE_2_X - off.first, TABLE_2_Y + off.second);
-    for (auto off : corns_offsets)
+    for (auto off : corns_offsets_1)
         corns.emplace_back(TABLE_1_X + off.first, TABLE_1_Y + off.second);
-    for (auto off : corns_offsets)
+    for (auto off : corns_offsets_2)
         corns.emplace_back(TABLE_2_X - off.first, TABLE_2_Y - off.second);
 
     // Move to initial position
-    ROS_INFO("Moving to the initial position (dock 2).");
-    sendGoalToMoveBase(docks[1].first, docks[1].second, NEG_Y_ORIENTATION);
-    cur_pos = 2;
+    ROS_INFO("Moving to the initial position (dock 1).");
+    spin(M_PI_2);
+    sendGoalToMoveBase(docks[0].first, docks[0].second, POS_Y_ORIENTATION);
+    spin(-M_PI_2);
+    cur_pos = 1;
 }
 
 // Detect tables
 void Movement::detect_tables(const sensor_msgs::LaserScan::ConstPtr& msg) {
-    const float THR1 = 0.5;
+    const float THR1 = 0.7;
     const float THR2 = 0.3;
 
     std::vector<std::vector<std::pair<float,float>>> points_proc;
@@ -119,20 +134,19 @@ void Movement::detect_tables(const sensor_msgs::LaserScan::ConstPtr& msg) {
 
     std::vector<std::pair<float,float>> tables_coord;
     for(int i: table_idxs) {
-        float x = 0.0;
-        float y = 0.0;
+        float x1 = points_proc[i][0].first;
+        float x2 = points_proc[i][points_proc[i].size()-1].first;
+        float y1 = points_proc[i][0].second;
+        float y2 = points_proc[i][points_proc[i].size()-1].second;
+        float x = (x1 + x2) / 2;
+        float y = (y1 + y2) / 2;
+
         // for(auto& point : points_proc[i]) {
         //     x += point.first;
         //     y += point.second;
         // }
         // x /= points_proc[i].size();
         // y /= points_proc[i].size();
-        x += points_proc[i][0].first;
-        x += points_proc[i][points_proc[i].size()-1].first;
-        x /= 2;
-        y += points_proc[i][0].second;
-        y += points_proc[i][points_proc[i].size()-1].second;
-        y /= 2;
 
         geometry_msgs::PoseStamped base_link_point;
         base_link_point.header.frame_id = "base_laser_link";
@@ -147,8 +161,10 @@ void Movement::detect_tables(const sensor_msgs::LaserScan::ConstPtr& msg) {
         geometry_msgs::PoseStamped map_point;
         tf2::doTransform(base_link_point, map_point, transform);
 
+        float dist = std::pow(x1-x2, 2) + std::pow(y1-y2, 2);
+
         tables_coord.push_back(std::make_pair(map_point.pose.position.x, map_point.pose.position.y));
-        // ROS_INFO("Table found at x=%f y=%f", map_point.pose.position.x, map_point.pose.position.y);
+        // ROS_INFO("Table found at x=%f y=%f width=%f", map_point.pose.position.x, map_point.pose.position.y, std::sqrt(dist));
     }
 
     tables_coord.erase(tables_coord.begin());

@@ -26,14 +26,15 @@ struct apriltag_str{
 };
 
 const float TABLE_SIDE = 0.85;
-const float PADDING    = 0.1;
+const float PADDING    = 0.05;
 
 std::pair<float,float> compute_coord(float start_x, float start_y, int count, float m, float q, float yaw){
-    const float OBJ_DIST_X = 0.1*cos(m);
+    const float OBJ_DIST = 0.12;
+    float OBJ_DIST_X = OBJ_DIST * cos(atan(m));
     float x_max = (TABLE_SIDE - PADDING - q) / m;
     float tgt_x = x_max - OBJ_DIST_X*(3-count);
     float tgt_y = tgt_x * m + q;
-    ROS_INFO("Real x=%f y=%f", start_x-tgt_y, start_y+tgt_x);
+    // ROS_INFO("Real x=%f y=%f", start_x-tgt_y, start_y+tgt_x);
     return std::make_pair(start_x +cos(yaw)*(tgt_x) - sin(yaw)*(tgt_y) , start_y + sin(yaw)*(tgt_x) + cos(yaw)*(tgt_y));
 }
 
@@ -64,7 +65,6 @@ void add_reference_collisions(float start_x, float start_y, float m, float q, fl
         collision_objects.push_back(collision_object);
     }
     planning_scene_interface.applyCollisionObjects(collision_objects);
-
 }
 
 void add_collision_objs(std::map<int, apriltag_str> tags, ros::ServiceClient& ad_client, Movement& mov) {
@@ -305,8 +305,8 @@ int main(int argc, char **argv) {
                 ROS_INFO("AprilTag %u with color %u detected at x=%f y=%f from dock %u", t.second.id, t.second.color, t.second.x, t.second.y, t.second.dock);
 
             mov.fix_pos();
-            add_reference_collisions(table_tag.x, table_tag.y, coeffs[0], coeffs[1], table_tag.yaw);
 
+            add_reference_collisions(table_tag.x, table_tag.y, coeffs[0], coeffs[1], table_tag.yaw);
 
             to_move.id = -1;
             for(auto tag : tags)
