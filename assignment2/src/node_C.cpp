@@ -60,7 +60,7 @@ class ArmMovementServer{
 
             moveit::planning_interface::MoveGroupInterface moveGroup("arm_torso");
             moveGroup.setPoseReferenceFrame("map");
-            moveGroup.setPlanningTime(30.0);
+            moveGroup.setPlanningTime(120.0);
             moveit::planning_interface::MoveGroupInterface::Plan plan;
             moveit::planning_interface::PlanningSceneInterface planningSceneInterface;   
 
@@ -77,7 +77,9 @@ class ArmMovementServer{
                 moveJointToPos(HOME_JOINT_POSITION);
                 geometry_msgs::Pose tgtPose = goal->tgt_pose;
                 tgtPose.position.z += APPRO;
-                moveArmToPoseTGT(moveGroup,plan,tgtPose);
+                if(!moveArmToPoseTGT(moveGroup,plan,tgtPose)){
+                    moveLinearTGT(moveGroup,plan,tgtPose);
+                }
                 remove_padding(goal->tgt_id);
                 // planningSceneInterface.removeCollisionObjects(tmp);
                 //ros::Duration(3.0).sleep();
@@ -116,7 +118,7 @@ class ArmMovementServer{
                 attach_detach_object_moveit(goal->tgt_id,moveit_msgs::CollisionObject{}, false);
                 attach_detach_object_gazebo(goal->tgt_id, false);
                 toggleGripper(true);
-                ros::Duration(2.0).sleep();
+                ros::Duration(3.0).sleep();
                 tgtPose.position.z+= APPRO;
                 moveLinearTGT(moveGroup,plan,tgtPose);
                 //ros::Duration(2.0).sleep();
@@ -260,7 +262,7 @@ class ArmMovementServer{
                 return true;
             }
 
-            ROS_ERROR("Error in movement to TGT");
+            ROS_ERROR("Error in movement to TGT, %d", planResult.val);
             return false;
         }
 
@@ -285,6 +287,7 @@ class ArmMovementServer{
             for(auto el : vec){
 		ROS_ERROR("OBJECT:%s",el.second.id.c_str());
                 auto elcol = el.second.primitives[0];
+                MOVEIT_MSGS_MESSAGE_MOVEITERRORCODES_H
 		ROS_ERROR("DIMS:%f",el.second.primitives[0].dimensions[elcol.BOX_X]);
                 elcol.dimensions[elcol.BOX_X] -= 0.05;
                 elcol.dimensions[elcol.BOX_Y] -= 0.05;

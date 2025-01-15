@@ -32,7 +32,7 @@ std::pair<float,float> compute_coord(float start_x, float start_y, int count, fl
     const int EXTRA = 2;
     float x_step = (TABLE_SIDE - PADDING - q) / ((3 + EXTRA) * m);
     float tgt_x = ((count + 1+EXTRA) * x_step);
-    float tgt_y = ((count + 1+EXTRA) * x_step) * m - q;
+    float tgt_y = ((count + 1+EXTRA) * x_step) * m + q;
     return std::make_pair(start_x +cos(yaw)*(tgt_x) - sin(yaw)*(tgt_y) , start_y + sin(yaw)*(tgt_x) + cos(yaw)*(tgt_y));
 }
 
@@ -226,7 +226,8 @@ int main(int argc, char **argv) {
     ROS_INFO("Line parameters, m:%f q:%f", coeffs[0], coeffs[1]);
 
     srand(time(0));
-    const int COLOR_TO_PICK = rand()%3;
+    //const int COLOR_TO_PICK = rand()%3;
+    const int COLOR_TO_PICK =  1;
     std::map<int, std::string> colorMap = {{0, "Blue"}, {1, "Red"}, {2, "Green"}};
     ROS_INFO("Object color choosen to be picked: %s", colorMap[COLOR_TO_PICK].c_str());
 
