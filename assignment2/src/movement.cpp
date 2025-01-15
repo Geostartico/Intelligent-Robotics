@@ -339,6 +339,7 @@ void Movement::spin(double yaw) {
 
     ac.sendGoal(spin);   
     bool finished = ac.waitForResult(ros::Duration(15.0));
+    ros::Duration(1.0).sleep();
 }
 
 float Movement::dock_dist(float x, float y, int dock) {
