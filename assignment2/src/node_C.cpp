@@ -25,8 +25,9 @@ const float OPENI = 0.10;
 const float CLOSEI = 0.02;
 //const std::vector<double> HOME_JOINT_POSITION_MEH = {1.48, 1, 1.5, 1.56, -1, 1.39, 1.5};
 //const std::vector<double> HOME_JOINT_POSITION = {0.200, 1, -1.68, 1.533, -2, 1.39, 0.10};
-const std::vector<double> HOME_JOINT_POSITION = {1.7, 1, 1.5, 2.25, -0.7, 1.2, 0.10};
-const std::vector<double> TUCKED_JOINT_POSITION = {0.200, -1.339, -0.200, 1.938, -1.570, 1.370, 1.2};
+// best for now const std::vector<double> HOME_JOINT_POSITION = {1.7, 1, 1.5, 2.25, -0.7, 1.2, 0.10};
+const std::vector<double> HOME_JOINT_POSITION = {0.07, 0.978, -2.366, 1.037, -1.238, 1.245, -0.227};
+const std::vector<double> TUCKED_JOINT_POSITION = {0.200, -1.339, -0.200, 1.938, -1.570, 1.370, 0};
 typedef actionlib::SimpleActionServer<assignment2::ObjectMoveAction> Server;
 const std::map<int, std::string> id2model = {
     {1, "Hexagon"},
@@ -109,7 +110,7 @@ class ArmMovementServer{
                 geometry_msgs::Pose tgtPose = goal -> tgt_pose;
                 tgtPose.position.z += APPRO;
                 //moveArmToPoseTGT(moveGroup, plan, tgtPose);
-		        moveLinearTGT(moveGroup, plan, tgtPose);
+		        moveArmToPoseTGT(moveGroup, plan, tgtPose);
                 //ros::Duration(3.0).sleep();
                 tgtPose.position.z-= APPRO;
                 tgtPose.position.z+= 0.15;

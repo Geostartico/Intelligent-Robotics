@@ -29,10 +29,11 @@ const float TABLE_SIDE = 0.85;
 const float PADDING    = 0.1;
 
 std::pair<float,float> compute_coord(float start_x, float start_y, int count, float m, float q, float yaw){
-    const int EXTRA = 2;
-    float x_step = (TABLE_SIDE - PADDING - q) / ((3 + EXTRA) * m);
-    float tgt_x = ((count + 1+EXTRA) * x_step);
-    float tgt_y = ((count + 1+EXTRA) * x_step) * m + q;
+    const float OBJ_DIST_X = 0.1*cos(m);
+    float x_max = (TABLE_SIDE - PADDING - q) / m;
+    float tgt_x = x_max - OBJ_DIST_X*(3-count);
+    float tgt_y = tgt_x * m + q;
+    ROS_INFO("Real x=%f y=%f", start_x-tgt_y, start_y+tgt_x);
     return std::make_pair(start_x +cos(yaw)*(tgt_x) - sin(yaw)*(tgt_y) , start_y + sin(yaw)*(tgt_x) + cos(yaw)*(tgt_y));
 }
 
@@ -176,7 +177,7 @@ void put_down_routine(std::map<int, apriltag_str>& tags, int to_pick, apriltag_s
     goal_place.tgt_pose.position.x =  put_down_x;
     goal_place.tgt_pose.position.y =  put_down_y;
     goal_place.tgt_pose.position.z =  tag.z;
-    qt.setRPY(0, M_PI_2, -M_PI_2);
+    qt.setRPY(0, M_PI_2, M_PI_2);
     goal_place.tgt_pose.orientation.w = qt.w();
     goal_place.tgt_pose.orientation.x = qt.x();
     goal_place.tgt_pose.orientation.y = qt.y();
