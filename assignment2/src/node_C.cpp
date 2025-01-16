@@ -110,7 +110,9 @@ class ArmMovementServer{
                 geometry_msgs::Pose tgtPose = goal -> tgt_pose;
                 tgtPose.position.z += APPRO;
                 //moveArmToPoseTGT(moveGroup, plan, tgtPose);
-		        moveArmToPoseTGT(moveGroup, plan, tgtPose);
+                if(!moveArmToPoseTGT(moveGroup,plan,tgtPose)){
+                    moveLinearTGT(moveGroup,plan,tgtPose);
+                }
                 //ros::Duration(3.0).sleep();
                 tgtPose.position.z-= APPRO;
                 tgtPose.position.z+= 0.15;

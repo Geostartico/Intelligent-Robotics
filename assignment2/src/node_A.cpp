@@ -25,8 +25,8 @@ struct apriltag_str{
     int dock;
 };
 
-const float TABLE_SIDE = 0.85;
-const float PADDING    = 0.05;
+const float TABLE_SIDE = 0.91;
+const float PADDING    = 0.01;
 
 std::pair<float,float> compute_coord(float start_x, float start_y, int count, float m, float q, float yaw){
     const float OBJ_DIST = 0.12;

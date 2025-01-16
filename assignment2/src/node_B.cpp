@@ -79,24 +79,29 @@ std::map<int,aprilmean> detectionCallback(const apriltag_ros::AprilTagDetectionA
     for(int i = 0; i < msg->detections.size(); ++i){
         ROS_INFO("DETECTED ID: %d",msg->detections.at(i).id[0]);
         int roi_size = 30; // Define a small window size around the center
-        float x, y,z;
-        x = msg->detections.at(i).pose.pose.pose.position.x;
-        y = msg->detections.at(i).pose.pose.pose.position.y;
-        z = msg->detections.at(i).pose.pose.pose.position.z;
-        cv::Point2d center = camera_model.project3dToPixel(cv::Point3d{x,y,z});
-        int x_center = center.x;
-        int y_center = center.y;
-        if(x_center < 0 || x_center >= img.cols || y_center < 0 || y_center >= img.rows){
-            sensor_msgs::CameraInfoConstPtr caminfo = ros::topic::waitForMessage<sensor_msgs::CameraInfo>("/xtion/rgb/camera_info", nh);
-            camera_model.fromCameraInfo(caminfo);
-	    float x, y,z;
-	    x = msg->detections.at(i).pose.pose.pose.position.x;
-	    y = msg->detections.at(i).pose.pose.pose.position.y;
-	    z = msg->detections.at(i).pose.pose.pose.position.z;
-	    cv::Point2d center = camera_model.project3dToPixel(cv::Point3d{x,y,z});
-	    x_center = center.x;
-	    y_center = center.y;
-        }
+	bool done = false;
+	int x_center;
+	int y_center;
+	while(!done){
+		try{
+			float x, y,z;
+			x = msg->detections.at(i).pose.pose.pose.position.x;
+			y = msg->detections.at(i).pose.pose.pose.position.y;
+			z = msg->detections.at(i).pose.pose.pose.position.z;
+			cv::Point2d center = camera_model.project3dToPixel(cv::Point3d{x,y,z});
+			x_center = center.x;
+			y_center = center.y;
+			if(x_center >= 0 && y_center >= 0 && x_center < img.cols && y_center < img.rows)
+				done = true;
+			else
+				throw x_center;
+		}
+		catch(...){
+			ROS_ERROR("exception in pixel conversion");
+			sensor_msgs::CameraInfoConstPtr caminfo = ros::topic::waitForMessage<sensor_msgs::CameraInfo>("/xtion/rgb/camera_info", nh);
+			camera_model.fromCameraInfo(caminfo);
+		}
+	}
         ROS_INFO("center: x=%d, y=%d",
                 x_center, y_center);
         bool found = false;
@@ -111,8 +116,6 @@ std::map<int,aprilmean> detectionCallback(const apriltag_ros::AprilTagDetectionA
 
             // Extract the region of interest and calculate the mean
             cv::Mat roi_image = img(roi);
-            cv::imshow("id", roi_image);
-            //cv::imwrite("/home/local/artigio86863/catkin_ws/"+std::to_string(msg->detections.at(i).id[0]), roi_image);
             mean_value = cv::mean(roi_image);
             if(mean_value[0]==mean_value[1]&&mean_value[0]==mean_value[2]&&mean_value[1]){
                 roi_size--;
