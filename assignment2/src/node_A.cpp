@@ -26,13 +26,15 @@ struct apriltag_str{
 };
 
 const float TABLE_SIDE = 0.91;
-const float PADDING    = 0.01;
+const float PADDING    = 0.1;
 
 std::pair<float,float> compute_coord(float start_x, float start_y, int count, float m, float q, float yaw){
-    const float OBJ_DIST = 0.12;
+    const float OBJ_DIST = 0.10;
+    const float TABLE_DIST = 0.05;
     float OBJ_DIST_X = OBJ_DIST * cos(atan(m));
+    float TABLE_DIST_X = TABLE_DIST * cos(atan(m));
     float x_max = (TABLE_SIDE - PADDING - q) / m;
-    float tgt_x = x_max - OBJ_DIST_X*(3-count);
+    float tgt_x = x_max - TABLE_DIST_X - OBJ_DIST_X*(3-count+1);
     float tgt_y = tgt_x * m + q;
     // ROS_INFO("Real x=%f y=%f", start_x-tgt_y, start_y+tgt_x);
     return std::make_pair(start_x +cos(yaw)*(tgt_x) - sin(yaw)*(tgt_y) , start_y + sin(yaw)*(tgt_x) + cos(yaw)*(tgt_y));
@@ -111,7 +113,7 @@ void add_collision_objs(std::map<int, apriltag_str> tags, ros::ServiceClient& ad
 //     planningSceneInterface.applyCollisionObjects(to_remove);
 // }
 
-void put_down_routine(std::map<int, apriltag_str>& tags, int to_pick, apriltag_str table_tag, int& put_objs, float m, float q, Movement& mov, ros::ServiceClient& ad_client) {
+void put_down_routine(std::map<int, apriltag_str>& tags, int to_pick, apriltag_str table_tag, int& put_objs, float m, float q, Movement& mov, ros::ServiceClient& ad_client, double turn) {
     actionlib::SimpleActionClient<assignment2::ObjectMoveAction> ac("move_object", true);
     ROS_INFO("Waiting for move_object server to start.");
     ac.waitForServer();
@@ -120,7 +122,6 @@ void put_down_routine(std::map<int, apriltag_str>& tags, int to_pick, apriltag_s
 
     // PICK UP
     ROS_INFO("Picking up object with AprilTag %u at x=%f y=%f from dock %u.", tag.id, tag.x, tag.y, tag.dock);
-    mov.goAround(tag.dock);
 
     add_collision_objs(tags, ad_client, mov);
 
@@ -163,12 +164,14 @@ void put_down_routine(std::map<int, apriltag_str>& tags, int to_pick, apriltag_s
     float put_down_y = coords.second;
     float put_down_x = coords.first;
 
+    mov.spin(-turn);
     int closestDock = mov.closest_dock(put_down_x, put_down_y);
 
     //PLACE DOWN
     ROS_INFO("Placing down object with AprilTag %u in x=%f y=%f from dock %u", tag.id, put_down_x, put_down_y, closestDock);
     mov.goAround(closestDock);
 
+    add_reference_collisions(table_tag.x, table_tag.y, m, q, table_tag.yaw);
     add_collision_objs(tags, ad_client, mov);
     
     assignment2::ObjectMoveGoal goal_place;
@@ -228,7 +231,7 @@ int main(int argc, char **argv) {
 
     srand(time(0));
     //const int COLOR_TO_PICK = rand()%3;
-    const int COLOR_TO_PICK =  1;
+    const int COLOR_TO_PICK =  2;
     std::map<int, std::string> colorMap = {{0, "Blue"}, {1, "Red"}, {2, "Green"}};
     ROS_INFO("Object color choosen to be picked: %s", colorMap[COLOR_TO_PICK].c_str());
 
@@ -248,13 +251,10 @@ int main(int argc, char **argv) {
         if(i==3) turns = {0.0};
         else turns = {0.0, -M_PI_4/3, 2*M_PI_4/3};
 
-        // REMOVE THIS
-        // if(i==5 || i==6) continue;
-
         do {
             ROS_INFO("Moving to dock %u.", i);
-            mov.goAround(i);
             for(auto turn: turns) {
+                mov.goAround(i);
                 mov.spin(turn);
                 assignment2::apriltag_detect ad_srv;
                 if(ad_client.call(ad_srv)) {
@@ -271,6 +271,7 @@ int main(int argc, char **argv) {
                                             [](const std::string &a, int b) {
                                                 return a.empty() ? std::to_string(b) : a + ", " + std::to_string(b);
                                             }).c_str());
+                    tags.clear();
                     for(int j=0; j<ids.size(); j++) {
                         apriltag_str tmp{x[j], y[j], z[j], yaw[j], ids[j], colors[j], i};
                         if(ids[j]==10){
@@ -278,55 +279,41 @@ int main(int argc, char **argv) {
                                 table_tag = tmp;
                             continue;
                         }
+
+                        int closestDock = mov.closest_dock(x[j], y[j]);
+                        tmp.dock = closestDock;
+                        tags[ids[j]] = tmp;
                         auto it = tags.find(ids[j]);
-                        if(it != tags.end()) {
-                            if(mov.dock_dist(x[j], y[j], i) < mov.dock_dist(it->second.x, it->second.y, it->second.dock)) {
-                                int closestDock = mov.closest_dock(x[j], y[j]);
-                                tmp.dock = closestDock;
-                                ROS_INFO("Updating AprilTag %u: from dock %u to dock %u", ids[j], it->second.dock, closestDock);
-                                tags[ids[j]] = tmp;
-                            }
-                        }
-                        else {
-                            int closestDock = mov.closest_dock(x[j], y[j]);
-                            tmp.dock = closestDock;
+                        if(it != tags.end()) 
+                            ROS_INFO("Updating AprilTag %u: from dock %u to dock %u", ids[j], it->second.dock, closestDock);
+                        else 
                             ROS_INFO("Adding new AprilTag %u at dock %u (x=%.2f, y=%.2f)", ids[j], closestDock, x[j], y[j]);
-                            tags[ids[j]] = tmp;
-                        }
                     }
                 }
+
+                if(i==3) continue;
+
+                ROS_INFO("Object detection results:");
+                ROS_INFO("Table (AprilTag 10) found at x=%f y=%f from dock %u", table_tag.x, table_tag.y, table_tag.dock);
+                for(auto t : tags) 
+                    ROS_INFO("AprilTag %u with color %u detected at x=%f y=%f from dock %u", t.second.id, t.second.color, t.second.x, t.second.y, t.second.dock);
+
+                to_move.id = -1;
+                for(auto tag : tags)
+                    if(to_move.id == -1 && tag.second.dock==i && tag.second.color==COLOR_TO_PICK)
+                        to_move = tag.second;
+                if(to_move.id != -1) {
+                    ROS_INFO("Starting the object placing routine.");
+                    put_down_routine(tags, to_move.id, table_tag, put_objs, coeffs[0], coeffs[1], mov, ad_client, turn);
+                    if(put_objs==3) return 0;
+                }
+                else 
+                    ROS_INFO("No object left to move from dock %u.", i);
             }
 
-            if(i==3) continue;
-
-            ROS_INFO("Object detection results:");
-            ROS_INFO("Table (AprilTag 10) found at x=%f y=%f from dock %u", table_tag.x, table_tag.y, table_tag.dock);
-            for(auto t : tags) 
-                ROS_INFO("AprilTag %u with color %u detected at x=%f y=%f from dock %u", t.second.id, t.second.color, t.second.x, t.second.y, t.second.dock);
-
-            mov.fix_pos();
-
-            add_reference_collisions(table_tag.x, table_tag.y, coeffs[0], coeffs[1], table_tag.yaw);
-
-            to_move.id = -1;
-            for(auto tag : tags)
-                if(to_move.id == -1 && tag.second.dock==i && tag.second.color==COLOR_TO_PICK)
-                    to_move = tag.second;
-            if(to_move.id != -1) {
-                ROS_INFO("Starting the object placing routine.");
-                put_down_routine(tags, to_move.id, table_tag, put_objs, coeffs[0], coeffs[1], mov, ad_client);
-            }
-            else 
-                ROS_INFO("No object left to move from dock %u.", i);
         }  
         while(to_move.id != -1);
     }
-
-    // for(int i=5; i>=1; i--) {
-    //     ROS_INFO("Moving to dock %u.", i);
-    //     mov.goAround(i);
-    //     wait_time.sleep();
-    // }
 
     return 0;
 }

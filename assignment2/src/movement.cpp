@@ -338,7 +338,7 @@ void Movement::fix_pos() {
         case 5: sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, POS_Y_ORIENTATION); break;
         case 6: sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, POS_X_ORIENTATION); break;
     }
-    ros::Duration(4.0).sleep();
+    ros::Duration(1.0).sleep();
 }
 
 void Movement::spin(double yaw) {
