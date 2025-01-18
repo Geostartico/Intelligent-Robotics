@@ -37,9 +37,9 @@ Movement::Movement(ros::NodeHandle& nh)
     // Detect tables coordinates
     ROS_INFO("Robot traverses the corridor.");
     sendGoalToMoveBase(MAX_CORRIDOR_X, 0.0, POS_X_ORIENTATION);
-    ros::Duration(1.0).sleep();
 
     ROS_INFO("Robot starts the first tables detection (raw).");
+    ros::Duration(2.0).sleep();
     const sensor_msgs::LaserScan::ConstPtr scan_msg_1 = ros::topic::waitForMessage<sensor_msgs::LaserScan>("/scan", nh);
     detect_tables(scan_msg_1);
 
@@ -48,9 +48,9 @@ Movement::Movement(ros::NodeHandle& nh)
     spin(-M_PI_2);
     sendGoalToMoveBase(MAX_CORRIDOR_X, (TABLE_1_Y+TABLE_2_Y)/2, NEG_Y_ORIENTATION);
     spin(M_PI_2);
-    ros::Duration(1.0).sleep();
 
     ROS_INFO("Robot starts the second tables detection (refined).");
+    ros::Duration(2.0).sleep();
     const sensor_msgs::LaserScan::ConstPtr scan_msg_2 = ros::topic::waitForMessage<sensor_msgs::LaserScan>("/scan", nh);
     detect_tables(scan_msg_2);
 
@@ -141,13 +141,6 @@ void Movement::detect_tables(const sensor_msgs::LaserScan::ConstPtr& msg) {
         float x = (x1 + x2) / 2;
         float y = (y1 + y2) / 2;
 
-        // for(auto& point : points_proc[i]) {
-        //     x += point.first;
-        //     y += point.second;
-        // }
-        // x /= points_proc[i].size();
-        // y /= points_proc[i].size();
-
         geometry_msgs::PoseStamped base_link_point;
         base_link_point.header.frame_id = "base_laser_link";
         base_link_point.header.stamp = ros::Time::now();
@@ -210,7 +203,7 @@ void Movement::sendGoalToMoveBase(double x, double y, const geometry_msgs::Quate
             ROS_WARN("Failed to reach the goal.");
         }
     }
-    ros::Duration(0.2).sleep();
+    ros::Duration(0.5).sleep();
 }
 
 // Clockwise movement
@@ -222,6 +215,7 @@ void Movement::go_clockwise(int target_pos) {
         case 3: case 4: escape_orientation = NEG_Y_ORIENTATION; break;
         case 6: case 1: escape_orientation = POS_Y_ORIENTATION; break;
     }
+    spin(M_PI_2);
     sendGoalToMoveBase(docks[cur_pos - 1].first, docks[cur_pos - 1].second, escape_orientation);
 
     while(cur_pos != target_pos) {
@@ -231,12 +225,14 @@ void Movement::go_clockwise(int target_pos) {
         }
         else if(cur_pos==1) {
             sendGoalToMoveBase(corns[0].first, corns[0].second, POS_Y_ORIENTATION);
+            spin(-M_PI_2);
             sendGoalToMoveBase(corns[0].first, corns[0].second, POS_X_ORIENTATION);
             cur_pos++;
             sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, POS_X_ORIENTATION);
         }
         else if(cur_pos==2) {
             sendGoalToMoveBase(corns[1].first, corns[1].second, POS_X_ORIENTATION);
+            spin(-M_PI_2);
             sendGoalToMoveBase(corns[1].first, corns[1].second, NEG_Y_ORIENTATION);
             cur_pos++;
             sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_Y_ORIENTATION);
@@ -247,18 +243,21 @@ void Movement::go_clockwise(int target_pos) {
         }
         else if(cur_pos==4) {
             sendGoalToMoveBase(corns[2].first, corns[2].second, NEG_Y_ORIENTATION);
+            spin(-M_PI_2);
             sendGoalToMoveBase(corns[2].first, corns[2].second, NEG_X_ORIENTATION);
             cur_pos++;
             sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_X_ORIENTATION);
         }
         else if(cur_pos==5) {
             sendGoalToMoveBase(corns[3].first, corns[3].second, NEG_X_ORIENTATION);
+            spin(-M_PI_2);
             sendGoalToMoveBase(corns[3].first, corns[3].second, POS_Y_ORIENTATION);
             cur_pos++;
             sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, POS_Y_ORIENTATION);
         }
     }
 
+    // spin(-M_PI_2);
     fix_pos();
 }
 
@@ -271,6 +270,7 @@ void Movement::go_counter_clockwise(int target_pos) {
         case 3: case 4: escape_orientation = POS_Y_ORIENTATION; break;
         case 6: case 1: escape_orientation = NEG_Y_ORIENTATION; break;
     }
+    spin(-M_PI_2);
     sendGoalToMoveBase(docks[cur_pos - 1].first, docks[cur_pos - 1].second, escape_orientation);
 
     while(cur_pos != target_pos) {
@@ -280,12 +280,14 @@ void Movement::go_counter_clockwise(int target_pos) {
         }
         else if(cur_pos==6) {
             sendGoalToMoveBase(corns[3].first, corns[3].second, NEG_Y_ORIENTATION);
+            spin(M_PI_2);
             sendGoalToMoveBase(corns[3].first, corns[3].second, POS_X_ORIENTATION);
             cur_pos--;
             sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, POS_X_ORIENTATION);
         }
         else if(cur_pos==5) {
             sendGoalToMoveBase(corns[2].first, corns[2].second, POS_X_ORIENTATION);
+            spin(M_PI_2);
             sendGoalToMoveBase(corns[2].first, corns[2].second, POS_Y_ORIENTATION);
             cur_pos--;
             sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, POS_Y_ORIENTATION);
@@ -296,18 +298,21 @@ void Movement::go_counter_clockwise(int target_pos) {
         }
         else if(cur_pos==3) {
             sendGoalToMoveBase(corns[1].first, corns[1].second, POS_Y_ORIENTATION);
+            spin(M_PI_2);
             sendGoalToMoveBase(corns[1].first, corns[1].second, NEG_X_ORIENTATION);
             cur_pos--;
             sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_Y_ORIENTATION);
         }
         else if(cur_pos==2) {
             sendGoalToMoveBase(corns[0].first, corns[0].second, NEG_X_ORIENTATION);
+            spin(M_PI_2);
             sendGoalToMoveBase(corns[0].first, corns[0].second, NEG_Y_ORIENTATION);
             cur_pos--;
             sendGoalToMoveBase(docks[cur_pos-1].first, docks[cur_pos-1].second, NEG_Y_ORIENTATION);
         }
     }
 
+    // spin(M_PI_2);
     fix_pos();
 }
 
@@ -356,7 +361,7 @@ void Movement::spin(double yaw) {
 
     ac.sendGoal(spin);   
     bool finished = ac.waitForResult(ros::Duration(15.0));
-    ros::Duration(4.0).sleep();
+    ros::Duration(0.5).sleep();
 }
 
 float Movement::dock_dist(float x, float y, int dock) {

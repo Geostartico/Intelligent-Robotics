@@ -18,7 +18,7 @@ private:
     // static constexpr float TABLE_2_Y = -3.01;
     static constexpr float MAX_CORRIDOR_X = 6.8;
     static constexpr float DIST_1 = 0.9;
-    static constexpr float DIST_2 = 0.91;
+    static constexpr float DIST_2 = 0.91; //bruttino
 
     const geometry_msgs::Quaternion POS_X_ORIENTATION;
     const geometry_msgs::Quaternion POS_Y_ORIENTATION;
