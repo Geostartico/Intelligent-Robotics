@@ -78,19 +78,15 @@ class Node_A {
         std::pair<float,float> compute_coord(float start_x, float start_y, float yaw) {
             const float OBJ_DIST = 0.12;
             const float TABLE_DIST = 0.05;
-
-            ROS_INFO("Tag 10: x=%f y=%f yaw=%f", start_x, start_y, yaw);
-
             float OBJ_DIST_X = OBJ_DIST * cos(atan(m));
             float TABLE_DIST_X = TABLE_DIST * cos(atan(m));
-            float x_max = (TABLE_SIDE - PADDING - q) / m;
+            float x_max = std::min((TABLE_SIDE-PADDING-q)/m, TABLE_SIDE-PADDING);
             float tgt_x = x_max - TABLE_DIST_X - OBJ_DIST_X*(3-placed_objs-1);  
             float tgt_y = tgt_x * m + q;
-            ROS_INFO("Real x=%f y=%f", start_x-tgt_y, start_y+tgt_x);
             return std::make_pair(start_x +cos(yaw)*(tgt_x) - sin(yaw)*(tgt_y) , start_y + sin(yaw)*(tgt_x) + cos(yaw)*(tgt_y));
         }
 
-        std::pair<float, float> refine_coord(float yaw) {
+        void refine_coord(std::pair<float, float>& coord, float yaw) {
             ROS_INFO("Refining placing coordinates...");
             const float OBJ_DIST = 0.12;
             const float TABLE_DIST = 0.05;
@@ -99,7 +95,6 @@ class Node_A {
             std::vector<float> x, y, z, yaws;
             assignment2::apriltag_detect ad_srv;
             float tgt_x, tgt_y;
-            std::pair<float,float> ret;
             if(ad_client.call(ad_srv)) {
                 ROS_INFO("Call to apriltags_detected_service: SUCCESSFUL.");
                 load_detections(ad_srv, ids, colors, x, y, z, yaws);
@@ -108,11 +103,10 @@ class Node_A {
                         ROS_INFO("Placing coordinates refined.");
                         tgt_x = OBJ_DIST_X;
                         tgt_y = OBJ_DIST_X*m;
-                        ret = std::make_pair(x[i]+cos(yaw)*(tgt_x) - sin(yaw)*(tgt_y) , y[i] + sin(yaw)*(tgt_x) + cos(yaw)*(tgt_y));
+                        coord = std::make_pair(x[i]+cos(yaw)*(tgt_x) - sin(yaw)*(tgt_y) , y[i] + sin(yaw)*(tgt_x) + cos(yaw)*(tgt_y));
                     }
                 }
             }
-            return ret;
         }
 
         void add_collision_objs(std::map<int, apriltag_str> tags) {
@@ -221,7 +215,7 @@ class Node_A {
             add_collision_objs(tags_pick);
 
             if(placed_last!=-1) {
-                std::pair<float, float> coords = refine_coord(table_tag.yaw);
+                refine_coord(coords, table_tag.yaw);
                 put_down_x = coords.first;
                 put_down_y = coords.second;
             }
@@ -282,10 +276,8 @@ class Node_A {
             std::vector<int> ids, colors;
             std::vector<float> x, y, z, yaw;
 
-            for(int i=3; i<=6; i++) {
-                std::vector<double> turns;
-                if(i==3) turns = {0.0};
-                else turns = {0.0, -M_PI_4/3, 2*M_PI_4/3};
+            for(int i=1; i<=6; i++) {
+                std::vector<double> turns = {0.0, -M_PI_4/3, 2*M_PI_4/3};
                 do {
                     ROS_INFO("Moving to dock %u.", i);
                     for(auto turn: turns) {
@@ -309,8 +301,6 @@ class Node_A {
                                 ROS_INFO("Adding AprilTag %u to dock %u (x=%.2f, y=%.2f)", ids[j], closestDock, x[j], y[j]);
                             }
                         }
-
-                        if(i==3) continue;
 
                         ROS_INFO("Object detection results:");
                         ROS_INFO("Table (AprilTag 10) found at x=%f y=%f from dock %u", table_tag.x, table_tag.y, table_tag.dock);

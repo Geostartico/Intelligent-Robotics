@@ -79,29 +79,15 @@ std::map<int,aprilmean> detectionCallback(const apriltag_ros::AprilTagDetectionA
     for(int i = 0; i < msg->detections.size(); ++i){
         ROS_INFO("DETECTED ID: %d",msg->detections.at(i).id[0]);
         int roi_size = 30; // Define a small window size around the center
-	bool done = false;
-	int x_center;
-	int y_center;
-	while(!done){
-		try{
-			float x, y,z;
-			x = msg->detections.at(i).pose.pose.pose.position.x;
-			y = msg->detections.at(i).pose.pose.pose.position.y;
-			z = msg->detections.at(i).pose.pose.pose.position.z;
-			cv::Point2d center = camera_model.project3dToPixel(cv::Point3d{x,y,z});
-			x_center = center.x;
-			y_center = center.y;
-			if(x_center >= 0 && y_center >= 0 && x_center < img.cols && y_center < img.rows)
-				done = true;
-			else
-				throw x_center;
-		}
-		catch(...){
-			ROS_ERROR("exception in pixel conversion");
-			sensor_msgs::CameraInfoConstPtr caminfo = ros::topic::waitForMessage<sensor_msgs::CameraInfo>("/xtion/rgb/camera_info", nh);
-			camera_model.fromCameraInfo(caminfo);
-		}
-	}
+        int x_center;
+        int y_center;
+        float x, y,z;
+        x = msg->detections.at(i).pose.pose.pose.position.x;
+        y = msg->detections.at(i).pose.pose.pose.position.y;
+        z = msg->detections.at(i).pose.pose.pose.position.z;
+        cv::Point2d center = camera_model.project3dToPixel(cv::Point3d{x,y,z});
+        x_center = center.x;
+        y_center = center.y;
         ROS_INFO("center: x=%d, y=%d",
                 x_center, y_center);
         bool found = false;
@@ -211,29 +197,6 @@ void lookDown() {
     } else {
         ROS_ERROR("Head movement did not finish before the timeout");
     }
-}
-void move_torso(){
-    // Create client the torso_controller
-    actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> torsoClient("/torso_controller/follow_joint_trajectory", true);
-    ROS_INFO("waiting for torso server");
-    torsoClient.waitForServer();
-
-    // Set joint values
-    control_msgs::FollowJointTrajectoryGoal goal;
-    goal.trajectory.joint_names.push_back("torso_lift_joint");
-    trajectory_msgs::JointTrajectoryPoint point;
-    point.positions.push_back(1.0);
-    point.time_from_start = ros::Duration(1.0);
-    goal.trajectory.points.push_back(point);
-
-    // Send goal and check the result
-    torsoClient.sendGoal(goal);
-    if (torsoClient.waitForResult()) {
-        //ros::Duration(DELAY).sleep();
-        ROS_INFO("The torso moved successfully.");
-    }
-    else
-        ROS_ERROR("An error occurred while moving the torso.");
 }
 
 /*
@@ -381,10 +344,16 @@ int main(int argc, char** argv)
 {
     ros::init(argc, argv, "locate_apriltag");
     ros::NodeHandle nh;
-    sensor_msgs::CameraInfoConstPtr caminfo = ros::topic::waitForMessage<sensor_msgs::CameraInfo>("/xtion/rgb/camera_info", nh);
+    sensor_msgs::CameraInfoConstPtr caminfo;
+
+    do {
+        caminfo = ros::topic::waitForMessage<sensor_msgs::CameraInfo>("/xtion/rgb/camera_info", nh);
+        ROS_INFO("Loading camera info... %f - %f - %d", caminfo->K[0], caminfo->K[4], caminfo->D.empty());
+    }
+    while(caminfo->K[0] == 0 || caminfo->K[4] == 0 || caminfo->D.empty());
+
     camera_model.fromCameraInfo(caminfo);
     lookDown();
-    move_torso();
     ROS_INFO_STREAM("locate_apriltag");
 
     ros::Subscriber tag_subscriber;

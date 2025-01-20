@@ -75,7 +75,7 @@ Movement::Movement(ros::NodeHandle& nh)
         corns.emplace_back(TABLE_2_X - off.first, TABLE_2_Y - off.second);
 
     // Move to initial position
-    ROS_INFO("Moving to the initial position (dock 1).");
+    ROS_INFO("Moving to the initial position.");
     spin(M_PI_2);
     sendGoalToMoveBase(docks[0].first, docks[0].second, POS_Y_ORIENTATION);
     spin(-M_PI_2);
