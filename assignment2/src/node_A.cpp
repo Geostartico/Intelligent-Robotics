@@ -77,7 +77,7 @@ class Node_A {
 
         std::pair<float,float> compute_coord(float start_x, float start_y, float yaw) {
             const float OBJ_DIST = 0.12;
-            const float TABLE_DIST = 0.05;
+            const float TABLE_DIST = 0.08;
             float OBJ_DIST_X = OBJ_DIST * cos(atan(m));
             float TABLE_DIST_X = TABLE_DIST * cos(atan(m));
             float x_max = std::min((TABLE_SIDE-PADDING-q)/m, TABLE_SIDE-PADDING);
@@ -86,7 +86,7 @@ class Node_A {
             return std::make_pair(start_x +cos(yaw)*(tgt_x) - sin(yaw)*(tgt_y) , start_y + sin(yaw)*(tgt_x) + cos(yaw)*(tgt_y));
         }
 
-        void refine_coord(std::pair<float, float>& coord, float yaw) {
+        bool refine_coord(std::pair<float, float>& coord, float yaw) {
             ROS_INFO("Refining placing coordinates...");
             const float OBJ_DIST = 0.12;
             const float TABLE_DIST = 0.05;
@@ -104,9 +104,11 @@ class Node_A {
                         tgt_x = OBJ_DIST_X;
                         tgt_y = OBJ_DIST_X*m;
                         coord = std::make_pair(x[i]+cos(yaw)*(tgt_x) - sin(yaw)*(tgt_y) , y[i] + sin(yaw)*(tgt_x) + cos(yaw)*(tgt_y));
+			return true;
                     }
                 }
             }
+	    return false;
         }
 
         void add_collision_objs(std::map<int, apriltag_str> tags) {
@@ -212,13 +214,19 @@ class Node_A {
             ROS_INFO("Placing down object with AprilTag %u from dock %u", tag.id, closestDock);
             mov.goAround(closestDock);
 
+	    std::vector<double> turns = {0.0, -M_PI_4/3, 2*M_PI_4/3,-M_PI_4/3};
             add_collision_objs(tags_pick);
+	    if(placed_last!=-1){
+		    for(auto turn: turns) {
+			    mov.goAround(closestDock);
+			    mov.spin(turn);
+			    if(refine_coord(coords, table_tag.yaw))
+				    break;
+			    put_down_x = coords.first;
+			    put_down_y = coords.second;
+		    }
+	    }
 
-            if(placed_last!=-1) {
-                refine_coord(coords, table_tag.yaw);
-                put_down_x = coords.first;
-                put_down_y = coords.second;
-            }
             ROS_INFO("Placing coordinates: x=%f y=%f", put_down_x, put_down_y);
             
             assignment2::ObjectMoveGoal goal_place;

@@ -78,7 +78,7 @@ std::map<int,aprilmean> detectionCallback(const apriltag_ros::AprilTagDetectionA
     ROS_INFO("image size: %d %d ",img.rows, img.cols);
     for(int i = 0; i < msg->detections.size(); ++i){
         ROS_INFO("DETECTED ID: %d",msg->detections.at(i).id[0]);
-        int roi_size = 30; // Define a small window size around the center
+        int roi_size = 15; // Define a small window size around the center
         int x_center;
         int y_center;
         float x, y,z;
@@ -104,12 +104,12 @@ std::map<int,aprilmean> detectionCallback(const apriltag_ros::AprilTagDetectionA
             cv::Mat roi_image = img(roi);
             mean_value = cv::mean(roi_image);
             if(mean_value[0]==mean_value[1]&&mean_value[0]==mean_value[2]&&mean_value[1]){
-                roi_size--;
+                roi_size++;
             }
             else{
                 found=true;
             }
-        }while(!found);
+        }while(!found && roi_size <=45);
 
         ROS_INFO("Mean values around tag %d: B=%f, G=%f, R=%f",
                 msg->detections.at(i).id[0], mean_value[0], mean_value[1], mean_value[2]);
