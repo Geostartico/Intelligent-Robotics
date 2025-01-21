@@ -323,7 +323,7 @@ void Movement::goAround(int target_pos) {
         return;
     }
     if (cur_pos == target_pos) {
-        ROS_WARN("Robot is already in target position.");
+        // ROS_WARN("Robot is already in target position.");
         return;
     }
     int clockwiseDistance = (target_pos - cur_pos + 6) % 6;

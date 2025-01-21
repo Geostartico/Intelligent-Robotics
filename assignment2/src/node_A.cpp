@@ -104,11 +104,12 @@ class Node_A {
                         tgt_x = OBJ_DIST_X;
                         tgt_y = OBJ_DIST_X*m;
                         coord = std::make_pair(x[i]+cos(yaw)*(tgt_x) - sin(yaw)*(tgt_y) , y[i] + sin(yaw)*(tgt_x) + cos(yaw)*(tgt_y));
-			return true;
+			            return true;
                     }
                 }
             }
-	    return false;
+            ROS_INFO("Previous placed object not found, placing coordinates not refined.");
+	        return false;
         }
 
         void add_collision_objs(std::map<int, apriltag_str> tags) {
@@ -214,18 +215,19 @@ class Node_A {
             ROS_INFO("Placing down object with AprilTag %u from dock %u", tag.id, closestDock);
             mov.goAround(closestDock);
 
-	    std::vector<double> turns = {0.0, -M_PI_4/3, 2*M_PI_4/3,-M_PI_4/3};
+	        std::vector<double> turns = {0.0, -M_PI_4/3, 2*M_PI_4/3};
+            if(placed_last!=-1){
+                for(auto turn: turns) {
+                    mov.spin(turn);
+                    if(refine_coord(coords, table_tag.yaw)) {
+                        put_down_x = coords.first;
+                        put_down_y = coords.second;
+                        break;
+                    }
+                }
+            }
+
             add_collision_objs(tags_pick);
-	    if(placed_last!=-1){
-		    for(auto turn: turns) {
-			    mov.goAround(closestDock);
-			    mov.spin(turn);
-			    if(refine_coord(coords, table_tag.yaw))
-				    break;
-			    put_down_x = coords.first;
-			    put_down_y = coords.second;
-		    }
-	    }
 
             ROS_INFO("Placing coordinates: x=%f y=%f", put_down_x, put_down_y);
             
@@ -270,12 +272,12 @@ class Node_A {
             y = ad_srv.response.y;
             z = ad_srv.response.z;
             yaw = ad_srv.response.yaw;
-            ROS_INFO("Detections IDs: total=%lu, content=[%s]", 
-                ids.size(),
-                std::accumulate(ids.begin(), ids.end(), std::string(),
-                [](const std::string &a, int b) {
-                    return a.empty() ? std::to_string(b) : a + ", " + std::to_string(b);
-                }).c_str());
+            // ROS_INFO("Detections IDs: total=%lu, content=[%s]", 
+            //     ids.size(),
+            //     std::accumulate(ids.begin(), ids.end(), std::string(),
+            //     [](const std::string &a, int b) {
+            //         return a.empty() ? std::to_string(b) : a + ", " + std::to_string(b);
+            //     }).c_str());
         }
 
         void launch() {
@@ -292,6 +294,7 @@ class Node_A {
                         mov.goAround(i);
                         mov.spin(turn);
                         assignment2::apriltag_detect ad_srv;
+                        ROS_INFO("Sending request to apriltags_detected_service.");
                         if(ad_client.call(ad_srv)) {
                             ROS_INFO("Call to apriltags_detected_service: SUCCESSFUL.");
                             load_detections(ad_srv, ids, colors, x, y, z, yaw);
@@ -306,14 +309,19 @@ class Node_A {
                                 int closestDock = mov.closest_dock(x[j], y[j]);
                                 tmp.dock = closestDock;
                                 tags_pick[ids[j]] = tmp;
-                                ROS_INFO("Adding AprilTag %u to dock %u (x=%.2f, y=%.2f)", ids[j], closestDock, x[j], y[j]);
+                                // ROS_INFO("Adding AprilTag %u to dock %u (x=%.2f, y=%.2f)", ids[j], closestDock, x[j], y[j]);
                             }
                         }
 
-                        ROS_INFO("Object detection results:");
-                        ROS_INFO("Table (AprilTag 10) found at x=%f y=%f from dock %u", table_tag.x, table_tag.y, table_tag.dock);
-                        for(auto t : tags_pick) 
-                            ROS_INFO("AprilTag %u with color %u detected at x=%f y=%f from dock %u", t.second.id, t.second.color, t.second.x, t.second.y, t.second.dock);
+                        if(!ids.empty()) {
+                            ROS_INFO("Object detection results:");
+                            if(table_tag.dock!=-1)
+                                ROS_INFO("Table (AprilTag 10) found at x=%f y=%f from dock %u.", table_tag.x, table_tag.y, table_tag.dock);
+                            for(auto t : tags_pick) 
+                                ROS_INFO("AprilTag %u with color %u detected at x=%f y=%f (closest_dock=%u).", t.second.id, t.second.color, t.second.x, t.second.y, t.second.dock);
+                        }
+                        else    
+                            ROS_INFO("No AprilTags found.");
 
                         to_move.id = -1;
                         for(auto tag : tags_pick)
@@ -324,11 +332,10 @@ class Node_A {
                             pick_place_routine(to_move.id, table_tag, turn);
                             if(placed_objs==3) return;
                         }
-                        else 
-                            ROS_INFO("No object left to move from dock %u.", i);
                     }
                 }  
                 while(to_move.id != -1);
+                ROS_INFO("No object with color %d left to move from dock %u.", color_to_pick, i);
             }
         }
 };
