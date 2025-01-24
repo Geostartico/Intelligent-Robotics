@@ -21,11 +21,7 @@
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/opencv.hpp>
 
-//after how many iterations to send the positions
-const int NUM_ITER_SEND = 10;
-const std::set<int> prism { 1, 2, 3};
-const std::set<int> cube { 4, 5, 6};
-const std::set<int> triangle { 7, 8, 9};
+
 const float PRISM_HEIGHT = 0.1;
 const float PRISM_RADIUS = 0.05;
 const float CUBE_SIDE = 0.05;
@@ -36,15 +32,13 @@ const float TRIANGLE_LENGTH = 0.05;
 const float TABLE_SIDE = 0.9;
 const float TABLE_HEIGHT = 0.775;
 const float TABLE_PADDING = 0.2;
-//const float TABLE_1_X = 7.82;
-//const float TABLE_1_Y = -1.96;
-//const float TABLE_2_X = 7.82;
-//const float TABLE_2_Y = -3.01;
+
 const int BLUE = 0;
 const int RED = 1;
 const int GREEN = 2;
 
 
+//compact struct for apriltag representation
 struct aprilmean{
     float x;
     float y;
@@ -53,6 +47,8 @@ struct aprilmean{
     float yaw;
     int color;
 };
+
+//camera model, initialized at startup of node
 image_geometry::PinholeCameraModel camera_model;
 
 std::map<int,aprilmean> detectionCallback(const apriltag_ros::AprilTagDetectionArrayConstPtr& msg){
@@ -75,10 +71,8 @@ std::map<int,aprilmean> detectionCallback(const apriltag_ros::AprilTagDetectionA
     ros::NodeHandle nh;
     const sensor_msgs::Image::ConstPtr img_msg = ros::topic::waitForMessage<sensor_msgs::Image>("/xtion/rgb/image_color", nh);
     cv::Mat img = cv_bridge::toCvCopy(img_msg, sensor_msgs::image_encodings::BGR8)->image;
-    ROS_INFO("image size: %d %d ",img.rows, img.cols);
     for(int i = 0; i < msg->detections.size(); ++i){
         ROS_INFO("DETECTED ID: %d",msg->detections.at(i).id[0]);
-        int roi_size = 15; // Define a small window size around the center
         int x_center;
         int y_center;
         float x, y,z;
@@ -91,18 +85,19 @@ std::map<int,aprilmean> detectionCallback(const apriltag_ros::AprilTagDetectionA
         ROS_INFO("center: x=%d, y=%d",
                 x_center, y_center);
         bool found = false;
+        int roi_size = 15; // Define a small window size around the center
         cv::Scalar mean_value;
+        //do until color found or window size gets too large
         do{
+            //create roi inside image
             cv::Rect roi(std::max(0, x_center - roi_size / 2),
                     std::max(0, y_center - roi_size / 2),
                     x_center + roi_size/2 > img.cols ? abs(x_center -img.cols-1) : roi_size,
                     y_center + roi_size/2 > img.rows ? abs(y_center -img.rows-1) : roi_size);
-            // Adjust the ROI size to fit within image bounds
-            //roi = roi & cv::Rect(0, 0, img.cols, img.rows);
-
-            // Extract the region of interest and calculate the mean
             cv::Mat roi_image = img(roi);
+            //compute mean color
             mean_value = cv::mean(roi_image);
+            //if the color is r=g=b make window greater
             if(mean_value[0]==mean_value[1]&&mean_value[0]==mean_value[2]&&mean_value[1]){
                 roi_size++;
             }
@@ -125,7 +120,7 @@ std::map<int,aprilmean> detectionCallback(const apriltag_ros::AprilTagDetectionA
 
         tf2::doTransform(pos_in, pos_out, transformed);
 
-        //insert the detection in the global vector
+        //insert the detection in the response vector
         double roll, pitch, yaw;
         aprilmean tmp;
         tmp.x = pos_out.pose.position.x;
@@ -137,6 +132,8 @@ std::map<int,aprilmean> detectionCallback(const apriltag_ros::AprilTagDetectionA
         tf2::convert(pos_out.pose.orientation, quat);
         tf2::Matrix3x3(quat).getRPY(roll, pitch, yaw);
         tmp.yaw = yaw;
+        //assign proper color
+        //if tag==10 it's the table tag
         if(tmp.id==10){
             tmp.color = -1;
         }
@@ -199,13 +196,9 @@ void lookDown() {
     }
 }
 
-/*
- * the following code is separated from the detector as if
- * they were in the same node the service wouldn't respond
- * 
-*/
 
 
+//function to add tables collision objects
 void add_tables(float table_1_x,float table_1_y,float table_2_x,float table_2_y){
     std::vector<moveit_msgs::CollisionObject> collision_objects;
     moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
@@ -249,17 +242,11 @@ void add_tables(float table_1_x,float table_1_y,float table_2_x,float table_2_y)
     planning_scene_interface.applyCollisionObjects(collision_objects);
 }
 
+//add collision objects for apriltag objects 
 void add_collision_objects(assignment2::apriltag_detect::Request tags){
     add_tables(tags.table_1_x,tags.table_1_y,tags.table_2_x,tags.table_2_y);
-    moveit::planning_interface::MoveGroupInterface move_group("arm_torso");
-    ROS_INFO("%s",move_group.getPlanningFrame().c_str());
     // Create a PlanningSceneInterface object
     moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
-
-    // Create a CollisionObject message
-    //collision_object.header.frame_id = move_group.getPlanningFrame(); // Replace with the appropriate frame ID
-
-    // Add shape and pose to the CollisionObject
 
     // Add the collision object to the planning scene
     std::vector<moveit_msgs::CollisionObject> collision_objects;
@@ -272,9 +259,11 @@ void add_collision_objects(assignment2::apriltag_detect::Request tags){
         float height, width, length;
         moveit_msgs::CollisionObject collision_object;
         collision_object.operation = collision_object.ADD;
+        //the tag is created so that it can be recreated easily
         collision_object.id = "box_april_"+std::to_string(id_);
         collision_object.header.frame_id = "/map";
         shape_msgs::SolidPrimitive primitive;
+        //all objects are boxes (see report for note on hexagons)
         primitive.type = primitive.BOX;
         primitive.dimensions.resize(3);
 
@@ -298,9 +287,9 @@ void add_collision_objects(assignment2::apriltag_detect::Request tags){
         else{
             continue;
         }
-        primitive.dimensions[primitive.BOX_X]= width + OBJ_PADDING; // Dimensions: X, Y, Z
-        primitive.dimensions[primitive.BOX_Y]= length + OBJ_PADDING; // Dimensions: X, Y, Z
-        primitive.dimensions[primitive.BOX_Z]= height + OBJ_PADDING; // Dimensions: X, Y, Z
+        primitive.dimensions[primitive.BOX_X]= width + OBJ_PADDING;
+        primitive.dimensions[primitive.BOX_Y]= length + OBJ_PADDING;
+        primitive.dimensions[primitive.BOX_Z]= height + OBJ_PADDING;
         // Define the pose of the object
         geometry_msgs::Pose box_pose;
         box_pose.position.x = x_;
@@ -316,11 +305,12 @@ void add_collision_objects(assignment2::apriltag_detect::Request tags){
         collision_object.primitive_poses.push_back(box_pose);
         collision_objects.push_back(collision_object);
     }
+    //add collision objects to planning scene
     planning_scene_interface.applyCollisionObjects(collision_objects);
 }
 
+//callback for service
 bool get_apriltags(assignment2::apriltag_detect::Request &req, assignment2::apriltag_detect::Response &res){
-    //the program saves the apriltags received from the detector
     ros::NodeHandle nh;
     const apriltag_ros::AprilTagDetectionArray::ConstPtr msg = ros::topic::waitForMessage<apriltag_ros::AprilTagDetectionArray>("tag_detections", nh);
     std::map<int, aprilmean> apriltags_detected = detectionCallback(msg);

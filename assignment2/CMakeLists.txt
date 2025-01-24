@@ -70,6 +70,3 @@ add_executable(node_C src/node_C.cpp)
 add_dependencies(node_C assignment2_generate_messages_cpp)
 target_link_libraries(node_C ${catkin_LIBRARIES})
 
-#add_executable(node_C_tester src/node_C_tester.cpp)
-#add_dependencies(node_C_tester assignment2_generate_messages_cpp)
-#target_link_libraries(node_C_tester ${catkin_LIBRARIES})
