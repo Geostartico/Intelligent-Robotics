@@ -35,7 +35,7 @@ Note that all prints on screen have been suppressed besides the Node A ones.
 
 ---
 
-## Additional points
+## Additional Points
 
 Both additional points for this assignment (tables position and object color detections) have been implemented.
 Both are enabled by default and it is not possible to deactivate them.
