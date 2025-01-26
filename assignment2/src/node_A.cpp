@@ -66,8 +66,7 @@ class Node_A {
 
             // Randomly choose the color of the objects that shall be picked
             srand(time(0));
-            // color = rand()%3;
-            color_to_pick = 2;
+            color_to_pick = rand()%3;
             std::map<int, std::string> colorMap = {{0, "Blue"}, {1, "Red"}, {2, "Green"}};
             ROS_INFO("Object color choosen to be picked: %s", colorMap[color_to_pick].c_str());
 
@@ -95,7 +94,6 @@ class Node_A {
         bool refine_coord(std::pair<float, float>& coord, float yaw) {
             ROS_INFO("Refining placing coordinates...");
             const float OBJ_DIST = 0.12;
-            const float TABLE_DIST = 0.05;
             float OBJ_DIST_X = OBJ_DIST * cos(atan(m));
             std::vector<int> ids, colors;
             std::vector<float> x, y, z, yaws;
@@ -302,6 +300,7 @@ class Node_A {
             apriltag_str to_move{0,0,0,0,-1,-1,-1};
             std::vector<int> ids, colors;
             std::vector<float> x, y, z, yaw;
+            std::map<int, std::string> colorMap = {{0, "Blue"}, {1, "Red"}, {2, "Green"}};
             // Perform the routine from all 6 docking stations
             for(int i=1; i<=6; i++) {
                 std::vector<double> turns = {0.0, -M_PI_4/3, 2*M_PI_4/3};
@@ -357,7 +356,7 @@ class Node_A {
                     }
                 }  
                 while(to_move.id != -1);
-                ROS_INFO("No object with color %d left to move from dock %u.", color_to_pick, i);
+                ROS_INFO("No object with color %s left to move from dock %u.", colorMap[color_to_pick].c_str(), i);
             }
         }
 };

@@ -15,8 +15,7 @@ class Movement {
 private:
     // Corridor end and dock distance constants
     static constexpr float MAX_CORRIDOR_X = 6.8;
-    static constexpr float DIST_1 = 0.9;
-    static constexpr float DIST_2 = 0.91; //bruttino
+    static constexpr float DIST = 0.9;
 
     // Possible robot orientation for movement
     const geometry_msgs::Quaternion POS_X_ORIENTATION;

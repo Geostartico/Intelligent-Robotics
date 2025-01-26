@@ -1,3 +1,0 @@
-<launch> 
-    <node pkg="assignment2" type="node_B" name="node_B" output="screen"/>
-</launch>

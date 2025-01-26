@@ -57,23 +57,19 @@ Movement::Movement(ros::NodeHandle& nh)
     detect_tables(scan_msg_2);
 
     // Initialize offsets for docks and corners position
-    std::vector<std::pair<float, float>> docks_offsets_1 = {
-        {-DIST_1, 0}, {0, -DIST_1}, {DIST_1, 0}};
-    std::vector<std::pair<float, float>> docks_offsets_2 = {
-        {-DIST_2, 0}, {0, -DIST_2}, {DIST_2, 0}};
-    std::vector<std::pair<float, float>> corns_offsets_1 = {
-        {-DIST_1, DIST_1}, {DIST_1, DIST_1}};
-    std::vector<std::pair<float, float>> corns_offsets_2 = {
-        {-DIST_2, DIST_2}, {DIST_2, DIST_2}};
+    std::vector<std::pair<float, float>> docks_offsets = {
+        {-DIST, 0}, {0, -DIST}, {DIST, 0}};
+    std::vector<std::pair<float, float>> corns_offsets = {
+        {-DIST, DIST}, {DIST, DIST}};
 
     // Initialize docks and corners positions
-    for (auto off : docks_offsets_1)
+    for (auto off : docks_offsets)
         docks.emplace_back(TABLE_1_X + off.first, TABLE_1_Y - off.second);
-    for (auto off : docks_offsets_2)
+    for (auto off : docks_offsets)
         docks.emplace_back(TABLE_2_X - off.first, TABLE_2_Y + off.second);
-    for (auto off : corns_offsets_1)
+    for (auto off : corns_offsets)
         corns.emplace_back(TABLE_1_X + off.first, TABLE_1_Y + off.second);
-    for (auto off : corns_offsets_2)
+    for (auto off : corns_offsets)
         corns.emplace_back(TABLE_2_X - off.first, TABLE_2_Y - off.second);
 
     // Move to initial position (dock 1)
