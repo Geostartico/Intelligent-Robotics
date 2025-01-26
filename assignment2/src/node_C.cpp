@@ -20,15 +20,17 @@
 const std::set<int> prism { 1, 2, 3};
 const std::set<int> cube { 4, 5, 6};
 const std::set<int> triangle { 7, 8, 9};
+
+//constants used to avoid collisions, joint positions found in RViz
 const float APPRO = 0.30;
 const float OPENI = 0.10;
 const float CLOSEI = 0.02;
-//const std::vector<double> HOME_JOINT_POSITION_MEH = {1.48, 1, 1.5, 1.56, -1, 1.39, 1.5};
-//const std::vector<double> HOME_JOINT_POSITION = {0.200, 1, -1.68, 1.533, -2, 1.39, 0.10};
-// best for now const std::vector<double> HOME_JOINT_POSITION = {1.7, 1, 1.5, 2.25, -0.7, 1.2, 0.10};
 const std::vector<double> HOME_JOINT_POSITION = {0.07, 0.978, -2.366, 1.037, -1.238, 1.245, -0.227};
 const std::vector<double> TUCKED_JOINT_POSITION = {0.200, -1.339, -0.200, 1.938, -1.570, 1.370, 0};
+
+
 typedef actionlib::SimpleActionServer<assignment2::ObjectMoveAction> Server;
+//support method for attachers
 const std::map<int, std::string> id2model = {
     {1, "Hexagon"},
     {2, "Hexagon_2"},
@@ -54,17 +56,19 @@ class ArmMovementServer{
         ArmMovementServer(std::string name):as(nh_, name, boost::bind(&ArmMovementServer::movementOnGoal, this, _1), false),
             action_name(name) {
                 as.start();
+                //robot moves to home position right away
                 moveJointToPos(HOME_JOINT_POSITION);
                 }
         
         void movementOnGoal(const assignment2::ObjectMoveGoal::ConstPtr &goal){
-
+            //the movement on goal methos handles both pick and place, flag given in goal
             moveit::planning_interface::MoveGroupInterface moveGroup("arm_torso");
             moveGroup.setPoseReferenceFrame("map");
             moveGroup.setPlanningTime(120.0);
             moveit::planning_interface::MoveGroupInterface::Plan plan;
             moveit::planning_interface::PlanningSceneInterface planningSceneInterface;   
 
+            //when in pick routine we send the command to open the gripper to avoid any issues
             if(goal->pick)
                 toggleGripper(true);
 
@@ -78,55 +82,48 @@ class ArmMovementServer{
                 moveJointToPos(HOME_JOINT_POSITION);
                 geometry_msgs::Pose tgtPose = goal->tgt_pose;
                 tgtPose.position.z += APPRO;
+                //failsafe, linear movement may be a little imprecise but it (almost) always works
                 if(!moveArmToPoseTGT(moveGroup,plan,tgtPose)){
                     moveLinearTGT(moveGroup,plan,tgtPose);
                 }
                 remove_padding(goal->tgt_id);
-                // planningSceneInterface.removeCollisionObjects(tmp);
-                //ros::Duration(3.0).sleep();
+                //remove approach distance from the Z of the goal to hover on the pick object
                 tgtPose.position.z-= APPRO;
                 tgtPose.position.z+= 0.10;
+                //complete movement by executing a linear approach and wait for gripper to close then perform attaches
                 moveLinearTGT(moveGroup,plan,tgtPose);
-		        //tmp[0] =  "table_2";
-                //planningSceneInterface.removeCollisionObjects(tmp);
-                //ros::Duration(2.0).sleep();
                 toggleGripper(false);
                 ros::Duration(1.0).sleep();
                 attach_detach_object_moveit(goal->tgt_id,colls[object_id], true);
                 attach_detach_object_gazebo(goal->tgt_id, true);
                 ros::Duration(2.0).sleep();
+                //depart from pick position and return to home 
                 tgtPose.position.z+= APPRO;
                 moveLinearTGT(moveGroup,plan,tgtPose);
-                //ros::Duration(2.0).sleep();
                 moveJointToPos(HOME_JOINT_POSITION);
-                //moveJointToPos(TUCKED_JOINT_POSITION);
                 result_.success = true;
                 feedback_.status = {"Robot picked the piece."};
                 as.publishFeedback(feedback_);
                 as.setSucceeded(result_);
             } 
             else {
+                //same actions as picking are performed but opens and detaches the object
                 moveJointToPos(HOME_JOINT_POSITION);
                 geometry_msgs::Pose tgtPose = goal -> tgt_pose;
                 tgtPose.position.z += APPRO;
-                //moveArmToPoseTGT(moveGroup, plan, tgtPose);
                 if(!moveArmToPoseTGT(moveGroup,plan,tgtPose)){
                     moveLinearTGT(moveGroup,plan,tgtPose);
                 }
-                //ros::Duration(3.0).sleep();
                 tgtPose.position.z-= APPRO;
                 tgtPose.position.z+= 0.15;
                 moveLinearTGT(moveGroup,plan,tgtPose);
-                //ros::Duration(2.0).sleep();
                 attach_detach_object_moveit(goal->tgt_id,moveit_msgs::CollisionObject{}, false);
                 attach_detach_object_gazebo(goal->tgt_id, false);
                 toggleGripper(true);
                 ros::Duration(3.0).sleep();
                 tgtPose.position.z+= APPRO;
                 moveLinearTGT(moveGroup,plan,tgtPose);
-                //ros::Duration(2.0).sleep();
                 moveJointToPos(HOME_JOINT_POSITION);
-                //moveJointToPos(TUCKED_JOINT_POSITION);
                 result_.success = true;
                 feedback_.status = {"Robot placed the piece."};
                 as.publishFeedback(feedback_);
@@ -149,8 +146,7 @@ class ArmMovementServer{
             return("error");
         }
 
-   
-        // TO DO: CAMBIA I NOMI DEI MODELLI
+        //Gazebo and MoveIt! attachers are separated because of conflicts that resulted in failed gazebo linking
         void attach_detach_object_gazebo(int id, bool attach){
             ros::ServiceClient gazebo_attach = nh_.serviceClient<gazebo_ros_link_attacher::Attach>(
                 attach ? "/link_attacher_node/attach" : "/link_attacher_node/detach");
@@ -176,43 +172,23 @@ class ArmMovementServer{
         }
 
         void attach_detach_object_moveit(int id, moveit_msgs::CollisionObject coll, bool attach){
-            //moveit part
-            // if(attach){
-            //     coll.operation = coll.ADD;
-            //     planning_scene_interface.applyCollisionObject(coll);
-            // }
             moveit::planning_interface::MoveGroupInterface moveGroup("arm_torso");
             std::string object_id = "box_april_"+std::to_string(id);
-            //std::vector<std::string> objects_query = {object_id};
-            //moveit_msgs::CollisionObject coll = planning_scene_interface.getObjects(objects_query)[0];
             std::string link_name = "arm_7_link";
             std::vector<std::string> touch_links = {
-               // "arm_1_link",
-               // "arm_2_link",
-               // "arm_3_link",
-               // "arm_4_link",
-               // "arm_5_link",
-               // "arm_6_link",
                 "arm_7_link",
                 "gripper_left_finger_link",
                 "gripper_right_finger_link"
             };
-            //moveit_msgs::AttachedCollisionObject attached_object;
-            //attached_object.link_name = link_name;
-            //attached_object.object = coll;
-            //attached_object.touch_links = touch_links;
             if(attach){
-                //attached_object.object.operation = moveit_msgs::CollisionObject::ADD;
-                //planning_scene_interface.applyAttachedCollisionObject(attached_object);
                 moveGroup.attachObject(object_id, link_name, touch_links);
             }
             else{
-                //attached_object.object.operation = moveit_msgs::CollisionObject::REMOVE;
-                //planning_scene_interface.applyAttachedCollisionObject(attached_object);
                 moveGroup.detachObject(object_id);
             }
         }
 
+        //use MoveIt! integrated methods, receives joint values in radians, read from RViz
         void moveJointToPos(const std::vector<double> joint_positions) {
             moveit::planning_interface::MoveGroupInterface move_group("arm"); 
             move_group.setJointValueTarget(joint_positions);
@@ -224,7 +200,8 @@ class ArmMovementServer{
                 ROS_WARN("Home Plan Failed");
             }
         }
-
+        
+        //two separated DoF, one for finger, moves both to execute grasp
         bool toggleGripper(bool open){
             actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction> gripper("/parallel_gripper_controller/follow_joint_trajectory", true);
             gripper.waitForServer();
@@ -246,7 +223,6 @@ class ArmMovementServer{
 
             gripper.sendGoal(goal);
             if (gripper.waitForResult()) {
-                // ros::Duration(1.0).sleep();
                 ROS_INFO("Gripper moved successfully.");
                 return true;
             }
@@ -255,13 +231,12 @@ class ArmMovementServer{
         }
 
         bool moveArmToPoseTGT(moveit::planning_interface::MoveGroupInterface& moveGroup, moveit::planning_interface::MoveGroupInterface::Plan& plan, geometry_msgs::Pose& tgt){
-            
+        //moves the arm to the given pose using joint movement   
             moveGroup.setPoseTarget(tgt);
             moveit::core::MoveItErrorCode planResult = moveGroup.plan(plan);
             if (planResult){
                 ROS_INFO("arm moving to tgt pose");
                 moveGroup.move();
-                // ros::Duration(5.0).sleep();
                 return true;
             }
 
@@ -270,6 +245,7 @@ class ArmMovementServer{
         }
 
         void moveLinearTGT(moveit::planning_interface::MoveGroupInterface& moveGroup, moveit::planning_interface::MoveGroupInterface::Plan& plan, geometry_msgs::Pose& tgt){
+        //moves the arm to given pose using cartesian paths    
             moveit_msgs::RobotTrajectory path;
             //float pathCartesian = moveGroup.computeCartesianPath(std::vector<geometry_msgs::Pose>{tgt}, 0.03,path); //compiles on local/updated ROS versions
             float pathCartesian = moveGroup.computeCartesianPath(std::vector<geometry_msgs::Pose>{tgt}, 0.03, 0,path); //compiles on vlab, deprecated.
@@ -277,27 +253,27 @@ class ArmMovementServer{
                 ROS_INFO("Arm in cartesian movement");
                 plan.trajectory_=path;
                 moveGroup.execute(plan);
-                // ros::Duration(5.0).sleep();
                 return;
             }
             ROS_ERROR("no cartesian path available");
             return;
         }   
         void remove_padding(int id){
+            //removes padding on collision object to perform precise grasping, padding is used to avoid collision while manipulator moves
             moveit::planning_interface::PlanningSceneInterface planningSceneInterface;   
             auto vec = planningSceneInterface.getObjects({"box_april_"+std::to_string(id)});
             std::vector<moveit_msgs::CollisionObject> colls;
             for(auto el : vec){
-		ROS_ERROR("OBJECT:%s",el.second.id.c_str());
+		        ROS_ERROR("OBJECT:%s",el.second.id.c_str());
                 auto elcol = el.second.primitives[0];
                 MOVEIT_MSGS_MESSAGE_MOVEITERRORCODES_H
-		ROS_ERROR("DIMS:%f",el.second.primitives[0].dimensions[elcol.BOX_X]);
+		        ROS_ERROR("DIMS:%f",el.second.primitives[0].dimensions[elcol.BOX_X]);
                 elcol.dimensions[elcol.BOX_X] -= 0.05;
                 elcol.dimensions[elcol.BOX_Y] -= 0.05;
                 elcol.dimensions[elcol.BOX_Z] -= 0.05;
                 el.second.operation = el.second.ADD;
-		el.second.primitives[0] = elcol;
-		ROS_ERROR("DIMS:%f",el.second.primitives[0].dimensions[elcol.BOX_X]);
+		        el.second.primitives[0] = elcol;
+		        ROS_ERROR("DIMS:%f",el.second.primitives[0].dimensions[elcol.BOX_X]);
                 colls.push_back(el.second);
             }
             planningSceneInterface.applyCollisionObjects(colls);
