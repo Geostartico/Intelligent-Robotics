@@ -28,7 +28,7 @@ Once the arm tucking procedure is completed, use the following launchfile to sta
 Lastly, launch Node A using the following command:
 
 ```bash
-	roslaunch assignment2 main_services.launch
+	roslaunch assignment2 main.launch
 ```
 
 Note that all prints on screen have been suppressed besides the Node A ones.
