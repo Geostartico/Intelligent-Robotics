@@ -265,7 +265,6 @@ class ArmMovementServer{
             std::vector<moveit_msgs::CollisionObject> colls;
             for(auto el : vec){
                 auto elcol = el.second.primitives[0];
-                MOVEIT_MSGS_MESSAGE_MOVEITERRORCODES_H
                 elcol.dimensions[elcol.BOX_X] -= 0.05;
                 elcol.dimensions[elcol.BOX_Y] -= 0.05;
                 elcol.dimensions[elcol.BOX_Z] -= 0.05;
