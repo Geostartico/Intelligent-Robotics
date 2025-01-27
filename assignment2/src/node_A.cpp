@@ -194,7 +194,6 @@ class Node_A {
             else
                 ROS_WARN("Action did not finish before timeout.");
 
-            // remove_collision_obj(tag.id);
             tags_pick.erase(tag.id);
             
             // Compute next ideal placing coordinates
