@@ -144,24 +144,8 @@ class Node_A {
             if(ad_client.call(ad_srv_coll))
                 ROS_INFO("Call to apriltags_detected_service: SUCCESSFUL.");
         }
-
-        // // Remove collision object relative to given id
-        // void remove_collision_obj(int id_picked) {
-        //     moveit::planning_interface::PlanningSceneInterface planningSceneInterface;
-        //     std::map<std::string, moveit_msgs::CollisionObject> colls = planningSceneInterface.getObjects();
-        //     if(id_picked!=-1) {
-        //         std::string object_id = "box_april_"+std::to_string(id_picked);
-        //         colls.erase(object_id);
-        //     }
-        //     std::vector<moveit_msgs::CollisionObject> to_remove;
-        //     for(auto it=colls.begin(); it!=colls.end(); it++){
-        //         to_remove.push_back(it->second);
-        //         it->second.operation=it->second.REMOVE;
-        //     }  
-        //     planningSceneInterface.applyCollisionObjects(to_remove);
-        // }
         
-        // Pick up object with given id and place it in the next placing positino
+        // Pick up object with given id and place it in the next placing position
         void pick_place_routine(int to_pick, apriltag_str table_tag, double turn) {
             actionlib::SimpleActionClient<assignment2::ObjectMoveAction> ac("move_object", true);
             ROS_INFO("Waiting for move_object server to start.");
