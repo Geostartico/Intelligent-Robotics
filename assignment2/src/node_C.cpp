@@ -30,7 +30,7 @@ const std::vector<double> TUCKED_JOINT_POSITION = {0.200, -1.339, -0.200, 1.938,
 
 
 typedef actionlib::SimpleActionServer<assignment2::ObjectMoveAction> Server;
-//support method for attachers
+//used by support method for attachers
 const std::map<int, std::string> id2model = {
     {1, "Hexagon"},
     {2, "Hexagon_2"},
@@ -264,16 +264,13 @@ class ArmMovementServer{
             auto vec = planningSceneInterface.getObjects({"box_april_"+std::to_string(id)});
             std::vector<moveit_msgs::CollisionObject> colls;
             for(auto el : vec){
-		        ROS_ERROR("OBJECT:%s",el.second.id.c_str());
                 auto elcol = el.second.primitives[0];
                 MOVEIT_MSGS_MESSAGE_MOVEITERRORCODES_H
-		        ROS_ERROR("DIMS:%f",el.second.primitives[0].dimensions[elcol.BOX_X]);
                 elcol.dimensions[elcol.BOX_X] -= 0.05;
                 elcol.dimensions[elcol.BOX_Y] -= 0.05;
                 elcol.dimensions[elcol.BOX_Z] -= 0.05;
                 el.second.operation = el.second.ADD;
 		        el.second.primitives[0] = elcol;
-		        ROS_ERROR("DIMS:%f",el.second.primitives[0].dimensions[elcol.BOX_X]);
                 colls.push_back(el.second);
             }
             planningSceneInterface.applyCollisionObjects(colls);
