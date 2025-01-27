@@ -8,7 +8,7 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TransformStamped.h>
 
-// Constructor: Trasverse corrideor, detect tables and take initiail position
+// Constructor: Trasverse corridor, detect tables and take initial position
 Movement::Movement(ros::NodeHandle& nh)
     : POS_X_ORIENTATION([] {
           geometry_msgs::Quaternion q;
