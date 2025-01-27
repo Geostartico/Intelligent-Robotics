@@ -336,11 +336,7 @@ int main(int argc, char** argv)
     ros::NodeHandle nh;
     sensor_msgs::CameraInfoConstPtr caminfo;
 
-    do {
-        caminfo = ros::topic::waitForMessage<sensor_msgs::CameraInfo>("/xtion/rgb/camera_info", nh);
-        ROS_INFO("Loading camera info... %f - %f - %d", caminfo->K[0], caminfo->K[4], caminfo->D.empty());
-    }
-    while(caminfo->K[0] == 0 || caminfo->K[4] == 0 || caminfo->D.empty());
+    caminfo = ros::topic::waitForMessage<sensor_msgs::CameraInfo>("/xtion/rgb/camera_info", nh);
 
     camera_model.fromCameraInfo(caminfo);
     lookDown();
